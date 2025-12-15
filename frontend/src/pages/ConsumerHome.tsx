@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Product } from '../types';
+import { View, Product } from '@/types/types';
 
 interface ConsumerHomeProps {
   navigate: (view: View) => void;

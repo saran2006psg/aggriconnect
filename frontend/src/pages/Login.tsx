@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Role } from '../types';
+import { Role } from '@/types/types';
 
 interface LoginProps {
   onLogin: () => void;

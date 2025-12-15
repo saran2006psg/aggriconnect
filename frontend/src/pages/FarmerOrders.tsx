@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View } from '../types';
+import { View } from '@/types/types';
 
 interface FarmerOrdersProps {
   navigate: (view: View) => void;

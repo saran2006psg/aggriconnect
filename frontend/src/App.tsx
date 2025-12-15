@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Role, View, Product, CartItem } from '@types/types';
-import { SAMPLE_PRODUCTS } from '@data/data';
+import { Role, View, Product, CartItem } from '@/types/types';
+import { SAMPLE_PRODUCTS } from '@/data/data';
 import Onboarding from '@pages/Onboarding';
 import Login from '@pages/Login';
 import ConsumerHome from '@pages/ConsumerHome';

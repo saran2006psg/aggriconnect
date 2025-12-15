@@ -1,5 +1,5 @@
 import React from 'react';
-import { Role } from '../types';
+import { Role } from '@/types/types';
 
 interface OnboardingProps {
   onRoleSelect: (role: Role) => void;

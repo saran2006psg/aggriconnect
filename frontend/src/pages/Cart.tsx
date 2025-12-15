@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, CartItem } from '../types';
+import { View, CartItem } from '@/types/types';
 
 interface CartProps {
   navigate: (view: View) => void;

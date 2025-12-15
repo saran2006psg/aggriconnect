@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View } from '../types';
+import { View } from '@/types/types';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface FarmerWalletProps {

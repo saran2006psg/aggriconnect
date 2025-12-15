@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Role } from '../types';
+import { View, Role } from '@/types/types';
 
 interface ProfileProps {
   navigate: (view: View) => void;

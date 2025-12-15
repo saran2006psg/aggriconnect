@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Product } from '../types';
+import { View, Product } from '@/types/types';
 
 interface FarmerProductsProps {
   navigate: (view: View) => void;

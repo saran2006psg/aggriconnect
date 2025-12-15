@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from '../types';
+import { View } from '@/types/types';
 
 interface OrderTrackingProps {
   navigate: (view: View) => void;
