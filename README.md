@@ -37,11 +37,13 @@ aggriconnect/
 **Prerequisites:** Node.js (v18+)
 
 ### 1. Navigate to frontend directory
+
 ```bash
 cd frontend
 ```
 
 ### 2. Install dependencies
+
 ```bash
 npm install
 ```
@@ -49,6 +51,7 @@ npm install
 ### 3. Set up environment variables
 
 Edit `frontend/.env` and add your Gemini API key:
+
 ```env
 VITE_GEMINI_API_KEY=your_api_key_here
 ```
@@ -56,6 +59,7 @@ VITE_GEMINI_API_KEY=your_api_key_here
 Get your API key from: https://makersuite.google.com/app/apikey
 
 ### 4. Run the development server
+
 ```bash
 npm run dev
 ```
@@ -65,6 +69,7 @@ The app will be available at **http://localhost:3000**
 ## 🎯 Features
 
 ### For Consumers
+
 - Browse fresh produce from local farmers
 - Product catalog with ratings and reviews
 - Shopping cart and checkout
@@ -73,12 +78,14 @@ The app will be available at **http://localhost:3000**
 - Bulk ordering options
 
 ### For Farmers
+
 - Product management dashboard
 - Order management system
 - Digital wallet and payment tracking
 - Analytics and insights
 
 ### For Admins
+
 - Platform oversight dashboard
 - User and product management
 - System analytics
@@ -117,10 +124,11 @@ The project uses TypeScript path aliases for clean imports:
 ```
 
 Example usage:
+
 ```typescript
-import { Product } from '@types/types';
-import { SAMPLE_PRODUCTS } from '@data/data';
-import ConsumerHome from '@pages/ConsumerHome';
+import { Product } from "@types/types";
+import { SAMPLE_PRODUCTS } from "@data/data";
+import ConsumerHome from "@pages/ConsumerHome";
 ```
 
 ## 🏗️ Build for Production
