@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
-import { Role, View, Product, CartItem } from './types';
-import { SAMPLE_PRODUCTS } from './data';
-import Onboarding from './screens/Onboarding';
-import Login from './screens/Login';
-import ConsumerHome from './screens/ConsumerHome';
-import FarmerDashboard from './screens/FarmerDashboard';
-import AdminDashboard from './screens/AdminDashboard';
-import ProductDetails from './screens/ProductDetails';
-import Cart from './screens/Cart';
-import OrderTracking from './screens/OrderTracking';
-import Subscriptions from './screens/Subscriptions';
-import AddProduct from './screens/AddProduct';
-import BulkOrder from './screens/BulkOrder';
-import Profile from './screens/Profile';
-import FarmerOrders from './screens/FarmerOrders';
-import FarmerProducts from './screens/FarmerProducts';
-import FarmerWallet from './screens/FarmerWallet';
+import { Role, View, Product, CartItem } from '@types/types';
+import { SAMPLE_PRODUCTS } from '@data/data';
+import Onboarding from '@pages/Onboarding';
+import Login from '@pages/Login';
+import ConsumerHome from '@pages/ConsumerHome';
+import FarmerDashboard from '@pages/FarmerDashboard';
+import AdminDashboard from '@pages/AdminDashboard';
+import ProductDetails from '@pages/ProductDetails';
+import Cart from '@pages/Cart';
+import OrderTracking from '@pages/OrderTracking';
+import Subscriptions from '@pages/Subscriptions';
+import AddProduct from '@pages/AddProduct';
+import BulkOrder from '@pages/BulkOrder';
+import Profile from '@pages/Profile';
+import FarmerOrders from '@pages/FarmerOrders';
+import FarmerProducts from '@pages/FarmerProducts';
+import FarmerWallet from '@pages/FarmerWallet';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('onboarding');
