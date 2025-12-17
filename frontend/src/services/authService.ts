@@ -8,12 +8,12 @@ export interface LoginCredentials {
 export interface RegisterData {
   email: string;
   password: string;
-  fullName: string;
+  full_name: string;
   role: 'consumer' | 'farmer' | 'admin';
-  phoneNumber?: string;
-  farmName?: string;
-  farmLocation?: string;
-  farmDescription?: string;
+  phone?: string;
+  farm_name?: string;
+  farm_location?: string;
+  farm_description?: string;
 }
 
 export interface AuthResponse {

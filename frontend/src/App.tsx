@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Role, View, Product, CartItem } from '@/types/types';
-import { SAMPLE_PRODUCTS } from '@/data/data';
+import { authService } from '@/services/authService';
+import { productService } from '@/services/productService';
 import Onboarding from '@pages/Onboarding';
 import Login from '@pages/Login';
 import ConsumerHome from '@pages/ConsumerHome';
@@ -20,11 +21,48 @@ import FarmerWallet from '@pages/FarmerWallet';
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('onboarding');
   const [role, setRole] = useState<Role>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // App Data State
-  const [products] = useState<Product[]>(SAMPLE_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (authService.isAuthenticated()) {
+        try {
+          const user = authService.getCurrentUserFromStorage();
+          if (user) {
+            setRole(user.role);
+            if (user.role === 'farmer') setCurrentView('farmer-dashboard');
+            else if (user.role === 'admin') setCurrentView('admin-dashboard');
+            else setCurrentView('consumer-home');
+          }
+        } catch (error) {
+          console.error('Auth check failed:', error);
+        }
+      }
+      setIsLoading(false);
+    };
+    checkAuth();
+  }, []);
+
+  // Load products
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await productService.getAllProducts();
+        if (response.success) {
+          setProducts(response.data.items);
+        }
+      } catch (error) {
+        console.error('Failed to load products:', error);
+      }
+    };
+    loadProducts();
+  }, []);
 
   const navigate = (view: View) => {
     window.scrollTo(0, 0);
@@ -77,6 +115,17 @@ export default function App() {
       return item;
     }).filter(item => item.quantity > 0));
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-text-main dark:text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderView = () => {
     switch (currentView) {

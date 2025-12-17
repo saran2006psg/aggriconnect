@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Role } from '@/types/types';
+import { authService } from '@/services/authService';
 
 interface LoginProps {
   onLogin: () => void;
@@ -10,15 +11,61 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin, onBack, role }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    phone: '',
+    farmName: '',
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-        setIsLoading(false);
-        onLogin();
-    }, 1200);
+    setError('');
+
+    try {
+      if (isLogin) {
+        // Login
+        const response = await authService.login({
+          email: formData.email,
+          password: formData.password,
+        });
+        
+        if (response.success) {
+          onLogin();
+        } else {
+          setError(response.message || 'Login failed');
+        }
+      } else {
+        // Register
+        const response = await authService.register({
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.fullName,
+          role: role,
+          phone: formData.phone,
+          farm_name: role === 'farmer' ? formData.farmName : undefined,
+        });
+        
+        if (response.success) {
+          onLogin();
+        } else {
+          setError(response.message || 'Registration failed');
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail?.[0]?.msg || err.response?.data?.message || 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isFarmer = role === 'farmer';
@@ -72,19 +119,54 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, role }) => {
               <span className="relative bg-background-light dark:bg-background-dark px-4 text-xs text-text-subtle uppercase tracking-wider">Or continue with</span>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                   <div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-300">
                       <div>
                         <label className="block text-xs font-bold text-text-subtle mb-1 uppercase">Full Name</label>
-                        <input required type="text" placeholder="John Doe" className="w-full h-14 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark px-4 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" />
+                        <input 
+                          required 
+                          type="text" 
+                          name="fullName"
+                          value={formData.fullName}
+                          onChange={handleInputChange}
+                          placeholder="John Doe" 
+                          className="w-full h-14 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark px-4 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" 
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-bold text-text-subtle mb-1 uppercase">Phone Number</label>
+                        <input 
+                          type="tel" 
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          placeholder="9876543210" 
+                          className="w-full h-14 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark px-4 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" 
+                        />
                       </div>
                       
                       {isFarmer && (
                           <div>
                             <label className="block text-xs font-bold text-text-subtle mb-1 uppercase">Farm Name</label>
-                            <input required type="text" placeholder="Green Acres" className="w-full h-14 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark px-4 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" />
+                            <input 
+                              required 
+                              type="text" 
+                              name="farmName"
+                              value={formData.farmName}
+                              onChange={handleInputChange}
+                              placeholder="Green Acres" 
+                              className="w-full h-14 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark px-4 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" 
+                            />
                           </div>
                       )}
                   </div>
@@ -94,7 +176,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, role }) => {
                 <label className="block text-xs font-bold text-text-subtle mb-1 uppercase">Email Address</label>
                 <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-subtle">mail</span>
-                    <input required type="email" placeholder="name@example.com" className="w-full h-14 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark pl-12 pr-4 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" />
+                    <input 
+                      required 
+                      type="email" 
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="name@example.com" 
+                      className="w-full h-14 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark pl-12 pr-4 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" 
+                    />
                 </div>
               </div>
 
@@ -102,7 +192,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, role }) => {
                 <label className="block text-xs font-bold text-text-subtle mb-1 uppercase">Password</label>
                 <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-subtle">lock</span>
-                    <input required type="password" placeholder="••••••••" className="w-full h-14 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark pl-12 pr-4 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" />
+                    <input 
+                      required 
+                      type="password" 
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="••••••••" 
+                      className="w-full h-14 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark pl-12 pr-4 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" 
+                    />
                 </div>
               </div>
 
