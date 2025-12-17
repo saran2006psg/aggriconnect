@@ -8,7 +8,13 @@ export interface CreateOrderData {
 
 export const orderService = {
   async createOrder(data: CreateOrderData) {
-    const response = await apiClient.post('/orders', data);
+    // Transform camelCase to snake_case for backend
+    const requestData = {
+      delivery_type: data.deliveryType,
+      delivery_address_id: data.deliveryAddress,
+      promo_code: data.promoCode
+    };
+    const response = await apiClient.post('/orders', requestData);
     return response.data;
   },
 

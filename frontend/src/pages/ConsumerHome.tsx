@@ -115,19 +115,27 @@ const ConsumerHome: React.FC<ConsumerHomeProps> = ({ navigate, cartCount, produc
             </div>
         ) : (
             <div className="grid grid-cols-2 gap-4">
-                {filteredProducts.map((item) => (
-                    <div key={item.id} onClick={() => onProductSelect(item)} className="flex flex-col gap-3 group cursor-pointer">
+                {filteredProducts.map((item) => {
+                    const isOutOfStock = item.stock_quantity !== undefined && item.stock_quantity <= 0;
+                    return (
+                    <div key={item.id} onClick={() => !isOutOfStock && onProductSelect(item)} className={`flex flex-col gap-3 group ${isOutOfStock ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                         <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-200 dark:bg-gray-800">
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                            <button 
-                                className="absolute bottom-3 right-3 h-10 w-10 flex items-center justify-center rounded-full bg-primary text-white shadow-lg active:scale-95 transition-transform hover:bg-primary/90" 
-                                onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    onAddToCart(item, 1);
-                                }}
-                            >
-                                <span className="material-symbols-outlined">add</span>
-                            </button>
+                            <img src={item.image} alt={item.name} className={`w-full h-full object-cover ${!isOutOfStock && 'group-hover:scale-110'} transition-transform duration-500`} />
+                            {isOutOfStock ? (
+                                <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full bg-gray-600 text-white text-xs font-bold">
+                                    Out of Stock
+                                </div>
+                            ) : (
+                                <button 
+                                    className="absolute bottom-3 right-3 h-10 w-10 flex items-center justify-center rounded-full bg-primary text-white shadow-lg active:scale-95 transition-transform hover:bg-primary/90" 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        onAddToCart(item, 1);
+                                    }}
+                                >
+                                    <span className="material-symbols-outlined">add</span>
+                                </button>
+                            )}
                         </div>
                         <div>
                             <h3 className="text-text-main dark:text-white font-bold leading-tight line-clamp-1">{item.name}</h3>
@@ -141,7 +149,8 @@ const ConsumerHome: React.FC<ConsumerHomeProps> = ({ navigate, cartCount, produc
                             <p className="text-xs text-text-subtle mt-1 truncate">{item.farmer}</p>
                         </div>
                     </div>
-                ))}
+                    );
+                })}
             </div>
         )}
       </div>

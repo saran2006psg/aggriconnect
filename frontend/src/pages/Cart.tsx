@@ -70,7 +70,13 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
                     {cart.map((item) => (
                         <div key={item.id} className="flex gap-4 p-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-sm">
                             <div className="h-20 w-20 rounded-xl bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0">
-                                <img src={item.image} className="w-full h-full object-cover" alt={item.name} />
+                                {item.image ? (
+                                  <img src={item.image} className="w-full h-full object-cover" alt={item.name} onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=400'; }} />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-gray-400">image</span>
+                                  </div>
+                                )}
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
                                 <h3 className="font-bold text-text-main dark:text-white line-clamp-1">{item.name}</h3>

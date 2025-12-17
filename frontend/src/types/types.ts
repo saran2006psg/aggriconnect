@@ -28,8 +28,10 @@ export interface Product {
   category: string;
   description?: string;
   location?: string;
+  stock_quantity?: number;
 }
 
 export interface CartItem extends Product {
   quantity: number;
+  productId?: string; // Backend product ID (different from cart item ID)
 }

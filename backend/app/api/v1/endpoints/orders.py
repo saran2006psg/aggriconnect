@@ -95,7 +95,7 @@ async def create_order(
             "consumer_id": user["id"],
             "delivery_type": order_data.delivery_type,
             "delivery_address_id": order_data.delivery_address_id,
-            "status": "Pending",
+            "status": "pending",
             "subtotal": float(subtotal),
             "delivery_fee": float(delivery_fee),
             "promo_code": order_data.promo_code,
@@ -127,11 +127,13 @@ async def create_order(
             }
             supabase_admin_client.table("order_items").insert(order_item).execute()
             
-            # Decrement product stock
-            supabase_admin_client.rpc(
-                "decrement_stock",
-                {"product_id": item["product_id"], "amount": item["quantity"]}
-            ).execute()
+            # Decrement product stock - update directly instead of using RPC
+            product_id = item["product_id"]
+            product_result = supabase_admin_client.table("products").select("stock_quantity").eq("id", product_id).execute()
+            if product_result.data:
+                current_stock = product_result.data[0]["stock_quantity"]
+                new_stock = max(0, current_stock - item["quantity"])
+                supabase_admin_client.table("products").update({"stock_quantity": new_stock}).eq("id", product_id).execute()
         
         # Clear cart
         supabase_admin_client.table("cart_items").delete().eq("cart_id", cart_id).execute()
@@ -151,9 +153,10 @@ async def create_order(
             errors={"auth": e.detail}
         )
     except Exception as e:
+        print(f"Order creation error: {str(e)}")  # Log the error
         return create_response(
             success=False,
-            message="Failed to create order",
+            message=f"Failed to create order: {str(e)}",
             errors={"server": str(e)}
         )
 
