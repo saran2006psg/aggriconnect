@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, CartItem } from '@/types/types';
+import { orderService } from '@/services/orderService';
 
 interface CartProps {
   navigate: (view: View) => void;
@@ -8,9 +9,34 @@ interface CartProps {
 }
 
 const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [deliveryType, setDeliveryType] = useState<'Delivery' | 'Pickup'>('Delivery');
+  const [error, setError] = useState('');
+
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const deliveryFee = subtotal > 0 ? 2.99 : 0;
+  const deliveryFee = subtotal > 0 && deliveryType === 'Delivery' ? 2.99 : 0;
   const total = subtotal + deliveryFee;
+
+  const handlePlaceOrder = async () => {
+    setIsPlacingOrder(true);
+    setError('');
+    
+    try {
+      const response = await orderService.createOrder({
+        deliveryType: deliveryType,
+      });
+      
+      if (response.success) {
+        navigate('order-tracking');
+      } else {
+        setError(response.message || 'Failed to place order');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.response?.data?.message || 'Failed to place order');
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-28">
@@ -22,6 +48,12 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
        </header>
 
        <main className="flex-1 p-4">
+           {error && (
+             <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm">
+               {error}
+             </div>
+           )}
+           
            {cart.length === 0 ? (
                <div className="flex flex-col items-center justify-center py-20 text-center">
                    <div className="h-24 w-24 bg-surface-light dark:bg-surface-dark rounded-full flex items-center justify-center mb-4">
@@ -82,14 +114,28 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
 
                 {/* Delivery & Payment Preview */}
                 <div className="mt-6 grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl border-2 border-primary bg-primary/5 cursor-pointer">
-                        <span className="material-symbols-outlined text-primary mb-1">local_shipping</span>
-                        <p className="font-bold text-primary">Home Delivery</p>
+                    <div 
+                      onClick={() => setDeliveryType('Delivery')}
+                      className={`p-4 rounded-xl cursor-pointer transition-all ${
+                        deliveryType === 'Delivery' 
+                          ? 'border-2 border-primary bg-primary/5' 
+                          : 'border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                        <span className={`material-symbols-outlined mb-1 ${deliveryType === 'Delivery' ? 'text-primary' : 'text-text-main dark:text-white'}`}>local_shipping</span>
+                        <p className={`font-bold ${deliveryType === 'Delivery' ? 'text-primary' : 'text-text-main dark:text-white'}`}>Home Delivery</p>
                         <p className="text-xs text-text-subtle">45 mins</p>
                     </div>
-                    <div className="p-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
-                        <span className="material-symbols-outlined text-text-main dark:text-white mb-1">storefront</span>
-                        <p className="font-bold text-text-main dark:text-white">Store Pickup</p>
+                    <div 
+                      onClick={() => setDeliveryType('Pickup')}
+                      className={`p-4 rounded-xl cursor-pointer transition-all ${
+                        deliveryType === 'Pickup' 
+                          ? 'border-2 border-primary bg-primary/5' 
+                          : 'border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                        <span className={`material-symbols-outlined mb-1 ${deliveryType === 'Pickup' ? 'text-primary' : 'text-text-main dark:text-white'}`}>storefront</span>
+                        <p className={`font-bold ${deliveryType === 'Pickup' ? 'text-primary' : 'text-text-main dark:text-white'}`}>Store Pickup</p>
                     </div>
                 </div>
                </>
@@ -98,8 +144,12 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
 
        {cart.length > 0 && (
         <footer className="fixed bottom-0 left-0 right-0 p-4 bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark z-20">
-            <button onClick={() => navigate('order-tracking')} className="w-full h-14 bg-primary text-white rounded-xl font-bold text-lg shadow-lg flex items-center justify-between px-6 active:scale-[0.98] transition-transform hover:bg-primary/90">
-                <span>Place Order</span>
+            <button 
+              onClick={handlePlaceOrder} 
+              disabled={isPlacingOrder}
+              className="w-full h-14 bg-primary text-white rounded-xl font-bold text-lg shadow-lg flex items-center justify-between px-6 active:scale-[0.98] transition-transform hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <span>{isPlacingOrder ? 'Placing Order...' : 'Place Order'}</span>
                 <span>${total.toFixed(2)}</span>
             </button>
         </footer>

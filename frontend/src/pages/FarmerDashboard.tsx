@@ -1,11 +1,70 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View } from '@/types/types';
+import { authService } from '@/services/authService';
+import { orderService } from '@/services/orderService';
 
 interface FarmerDashboardProps {
   navigate: (view: View) => void;
 }
 
 const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
+  const [user, setUser] = useState<any>(null);
+  const [todayEarnings, setTodayEarnings] = useState<number>(0);
+  const [pendingOrdersCount, setPendingOrdersCount] = useState<number>(0);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const userData = authService.getCurrentUserFromStorage();
+    setUser(userData);
+    if (userData) {
+      loadDashboardData();
+    }
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      const response = await orderService.getOrders();
+      if (response.success && response.data.items) {
+        const orders = response.data.items;
+        
+        // Calculate today's earnings
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let earnings = 0;
+        let pendingCount = 0;
+        const todayOrders: any[] = [];
+        
+        orders.forEach((order: any) => {
+          const orderDate = new Date(order.created_at);
+          orderDate.setHours(0, 0, 0, 0);
+          
+          // Count pending orders
+          if (order.status === 'pending' || order.status === 'confirmed') {
+            pendingCount++;
+          }
+          
+          // Calculate today's earnings and get recent orders
+          if (orderDate.getTime() === today.getTime()) {
+            if (order.status !== 'cancelled') {
+              earnings += parseFloat(order.total_amount);
+            }
+            todayOrders.push(order);
+          }
+        });
+        
+        setTodayEarnings(earnings);
+        setPendingOrdersCount(pendingCount);
+        setRecentOrders(todayOrders.slice(0, 3));
+      }
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark pb-24">
       {/* Header */}
@@ -19,17 +78,26 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
       <div className="p-4 space-y-6">
         {/* Welcome */}
         <div>
-            <h2 className="text-2xl font-bold text-text-main dark:text-white">John Appleseed</h2>
-            <div className="flex items-center gap-1 mt-1 text-primary">
-                <span className="material-symbols-outlined text-lg">location_on</span>
-                <span className="text-sm font-medium">Green Valley Farm, CA</span>
-            </div>
+            <h2 className="text-2xl font-bold text-text-main dark:text-white">{user?.full_name || 'Farmer'}</h2>
+            {user?.farm_location && (
+              <div className="flex items-center gap-1 mt-1 text-primary">
+                  <span className="material-symbols-outlined text-lg">location_on</span>
+                  <span className="text-sm font-medium">{user.farm_location}</span>
+              </div>
+            )}
+            {user?.farm_name && (
+              <p className="text-sm text-text-subtle mt-1">{user.farm_name}</p>
+            )}
         </div>
 
         {/* Stats */}
         <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
             <p className="text-text-subtle font-medium mb-1">Today's Earnings</p>
-            <p className="text-4xl font-bold text-text-main dark:text-white">$150.75</p>
+            {isLoading ? (
+              <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            ) : (
+              <p className="text-4xl font-bold text-text-main dark:text-white">${todayEarnings.toFixed(2)}</p>
+            )}
         </div>
 
         {/* Quick Actions */}
@@ -47,7 +115,9 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
                 <span className="font-bold text-sm text-text-main dark:text-white text-center">Inventory</span>
             </button>
              <button onClick={() => navigate('farmer-orders')} className="aspect-square p-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark flex flex-col items-center justify-center gap-3 hover:shadow-md transition-all hover:bg-gray-50 dark:hover:bg-white/5 active:scale-[0.98] relative">
-                <div className="absolute top-3 right-3 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold">3</div>
+                {pendingOrdersCount > 0 && (
+                  <div className="absolute top-3 right-3 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold">{pendingOrdersCount}</div>
+                )}
                 <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
                     <span className="material-symbols-outlined text-2xl">shopping_basket</span>
                 </div>
@@ -68,18 +138,36 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
                 <button onClick={() => navigate('farmer-orders')} className="text-primary text-sm font-bold hover:underline">View All</button>
             </div>
             <div className="space-y-4">
-                {[1, 2].map((i) => (
+                {isLoading ? (
+                  [...Array(2)].map((_, i) => (
                     <div key={i} className="flex items-center gap-4">
-                         <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                             <img src={`https://randomuser.me/api/portraits/thumb/women/${i + 20}.jpg`} alt="User" className="w-full h-full object-cover" />
+                      <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+                      </div>
+                      <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                    </div>
+                  ))
+                ) : recentOrders.length > 0 ? (
+                  recentOrders.map((order) => (
+                    <div key={order.id} className="flex items-center gap-4">
+                         <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                             <span className="material-symbols-outlined text-primary">shopping_bag</span>
                          </div>
                          <div className="flex-1">
-                             <p className="font-bold text-text-main dark:text-white text-sm">Jane Doe</p>
-                             <p className="text-xs text-text-subtle">Pickup • 3 Items</p>
+                             <p className="font-bold text-text-main dark:text-white text-sm">Order #{order.id.slice(0, 8)}</p>
+                             <p className="text-xs text-text-subtle">{order.delivery_type} • {order.items?.length || 0} Items</p>
                          </div>
-                         <span className="font-bold text-primary">$24.50</span>
+                         <span className="font-bold text-primary">${parseFloat(order.total_amount).toFixed(2)}</span>
                     </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-text-subtle">
+                    <span className="material-symbols-outlined text-4xl mb-2 opacity-50">inbox</span>
+                    <p className="text-sm">No orders today</p>
+                  </div>
+                )}
             </div>
         </div>
       </div>

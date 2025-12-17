@@ -1,12 +1,57 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Product } from '@/types/types';
+import { productService } from '@/services/productService';
+import { authService } from '@/services/authService';
 
 interface FarmerProductsProps {
   navigate: (view: View) => void;
   products: Product[];
 }
 
-const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate, products }) => {
+const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate }) => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      const user = authService.getCurrentUserFromStorage();
+      const response = await productService.getAllProducts({
+        farmerId: user?.id
+      });
+      if (response.success) {
+        setProducts(response.data.items);
+      }
+    } catch (error) {
+      console.error('Failed to load products:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    
+    try {
+      await productService.deleteProduct(productId);
+      setProducts(prev => prev.filter(p => p.id !== productId));
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      alert('Failed to delete product');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
+        <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-24">
        <header className="flex items-center p-4 sticky top-0 z-10 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm border-b border-border-light dark:border-border-dark">
@@ -44,7 +89,10 @@ const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate, products }) =
                                    <button className="h-8 w-8 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center text-text-subtle hover:text-primary transition-colors">
                                        <span className="material-symbols-outlined text-lg">edit</span>
                                    </button>
-                                   <button className="h-8 w-8 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 flex items-center justify-center text-red-500 hover:text-red-600 transition-colors">
+                                   <button 
+                                     onClick={() => handleDelete(product.id)} 
+                                     className="h-8 w-8 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 flex items-center justify-center text-red-500 hover:text-red-600 transition-colors"
+                                   >
                                        <span className="material-symbols-outlined text-lg">delete</span>
                                    </button>
                                </div>

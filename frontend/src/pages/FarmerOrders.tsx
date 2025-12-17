@@ -1,31 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View } from '@/types/types';
+import { orderService } from '@/services/orderService';
 
 interface FarmerOrdersProps {
   navigate: (view: View) => void;
 }
 
 const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
-  const [filter, setFilter] = useState<'All' | 'Pending' | 'Completed' | 'Cancelled'>('All');
+  const [filter, setFilter] = useState<'All' | 'pending' | 'delivered' | 'cancelled'>('All');
+  const [orders, setOrders] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const orders = [
-      { id: 'ORD-001', customer: 'Jane Doe', items: '3 items', total: 24.50, status: 'Pending', time: '10:30 AM', type: 'Pickup' },
-      { id: 'ORD-002', customer: 'Mike Ross', items: '1 item', total: 12.00, status: 'Completed', time: '09:15 AM', type: 'Delivery' },
-      { id: 'ORD-003', customer: 'Rachel Zane', items: '5 items', total: 45.20, status: 'Pending', time: 'Yesterday', type: 'Delivery' },
-      { id: 'ORD-004', customer: 'Harvey S.', items: 'Bulk Order', total: 150.00, status: 'Completed', time: 'Yesterday', type: 'Pickup' },
-      { id: 'ORD-005', customer: 'Louis Litt', items: '2 items', total: 18.50, status: 'Cancelled', time: 'Oct 20', type: 'Delivery' },
-  ];
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
+    try {
+      const response = await orderService.getOrders();
+      if (response.success) {
+        setOrders(response.data.items || []);
+      }
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    try {
+      await orderService.updateOrderStatus(orderId, newStatus);
+      loadOrders(); // Reload orders
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      alert('Failed to update order status');
+    }
+  };
 
   const filteredOrders = orders.filter(o => filter === 'All' || o.status === filter);
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'Pending': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'Completed': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case 'Cancelled': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      case 'pending': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'confirmed': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'processing': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+      case 'out_for_delivery': return 'bg-primary/10 text-primary';
+      case 'delivered': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case 'cancelled': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     }
   };
+
+  const formatStatus = (status: string) => {
+    return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
+        <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-24">
@@ -39,13 +76,18 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
        <main className="flex-1 p-4">
            {/* Filter Tabs */}
            <div className="flex p-1 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl mb-6 overflow-x-auto no-scrollbar">
-                {['All', 'Pending', 'Completed', 'Cancelled'].map((tab) => (
+                {[
+                  { label: 'All', value: 'All' },
+                  { label: 'Pending', value: 'pending' },
+                  { label: 'Delivered', value: 'delivered' },
+                  { label: 'Cancelled', value: 'cancelled' }
+                ].map((tab) => (
                     <button 
-                        key={tab}
-                        onClick={() => setFilter(tab as any)}
-                        className={`flex-1 py-2 px-3 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${filter === tab ? 'bg-primary text-white shadow-md' : 'text-text-subtle hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                        key={tab.value}
+                        onClick={() => setFilter(tab.value as any)}
+                        className={`flex-1 py-2 px-3 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${filter === tab.value ? 'bg-primary text-white shadow-md' : 'text-text-subtle hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                     >
-                        {tab}
+                        {tab.label}
                     </button>
                 ))}
            </div>
@@ -58,26 +100,25 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                        <p>No orders found</p>
                    </div>
                ) : (
-                   filteredOrders.map((order, idx) => (
-                       <div key={idx} className="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-border-light dark:border-border-dark shadow-sm">
+                   filteredOrders.map((order) => (
+                       <div key={order.id} className="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 border border-border-light dark:border-border-dark shadow-sm">
                            <div className="flex justify-between items-start mb-3">
-                               <div className="flex items-center gap-3">
-                                   <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                                       <img src={`https://randomuser.me/api/portraits/thumb/men/${(idx % 50) + 10}.jpg`} alt="User" className="w-full h-full object-cover" />
-                                   </div>
-                                   <div>
-                                       <p className="font-bold text-text-main dark:text-white">{order.customer}</p>
-                                       <p className="text-xs text-text-subtle">{order.id} • {order.time}</p>
+                               <div className="flex-1">
+                                   <div className="flex justify-between items-start">
+                                       <div>
+                                           <p className="font-bold text-text-main dark:text-white">Order #{order.id.slice(0, 8)}</p>
+                                           <p className="text-xs text-text-subtle">{new Date(order.created_at).toLocaleDateString()}</p>
+                                       </div>
+                                       <span className={`px-2 py-1 rounded-md text-xs font-bold ${getStatusStyle(order.status)}`}>
+                                           {formatStatus(order.status)}
+                                       </span>
                                    </div>
                                </div>
-                               <span className={`px-2 py-1 rounded-md text-xs font-bold ${getStatusStyle(order.status)}`}>
-                                   {order.status}
-                               </span>
                            </div>
                            
                            <div className="flex justify-between items-center py-2 border-t border-b border-border-light dark:border-border-dark my-2 border-dashed">
-                               <span className="text-sm font-medium text-text-main dark:text-white">{order.items}</span>
-                               <span className="text-sm font-bold text-text-main dark:text-white">${order.total.toFixed(2)}</span>
+                               <span className="text-sm font-medium text-text-main dark:text-white">{order.items?.length || 0} items</span>
+                               <span className="text-sm font-bold text-text-main dark:text-white">${parseFloat(order.total_amount).toFixed(2)}</span>
                            </div>
 
                            <div className="flex items-center justify-between mt-3">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Role, View, Product, CartItem } from '@/types/types';
 import { authService } from '@/services/authService';
 import { productService } from '@/services/productService';
+import { cartService } from '@/services/cartService';
 import Onboarding from '@pages/Onboarding';
 import Login from '@pages/Login';
 import ConsumerHome from '@pages/ConsumerHome';
@@ -91,29 +92,81 @@ export default function App() {
     navigate('product-details');
   };
 
-  // -- Cart Logic --
-  const addToCart = (product: Product, quantity: number = 1) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item => 
-          item.id === product.id 
-            ? { ...item, quantity: item.quantity + quantity } 
-            : item
-        );
+  // Load cart on mount
+  useEffect(() => {
+    const loadCart = async () => {
+      if (authService.isAuthenticated()) {
+        try {
+          const response = await cartService.getCart();
+          if (response.success && response.data.items) {
+            // Transform backend cart items to match CartItem interface
+            const cartItems = response.data.items.map((item: any) => ({
+              id: item.product_id,
+              name: item.product_name || '',
+              price: parseFloat(item.price || 0),
+              quantity: item.quantity,
+              image: item.image_url || '',
+              farmer: item.farmer || '',
+              unit: item.unit || 'kg',
+              category: ''
+            }));
+            setCart(cartItems);
+          }
+        } catch (error) {
+          console.error('Failed to load cart:', error);
+        }
       }
-      return [...prev, { ...product, quantity }];
-    });
+    };
+    loadCart();
+  }, [currentView]);
+
+  // -- Cart Logic --
+  const addToCart = async (product: Product, quantity: number = 1) => {
+    try {
+      await cartService.addToCart(product.id, quantity);
+      // Reload cart from backend
+      const response = await cartService.getCart();
+      if (response.success && response.data.items) {
+        const cartItems = response.data.items.map((item: any) => ({
+          id: item.product_id,
+          name: item.product_name || '',
+          price: parseFloat(item.price || 0),
+          quantity: item.quantity,
+          image: item.image_url || '',
+          farmer: item.farmer || '',
+          unit: item.unit || 'kg',
+          category: ''
+        }));
+        setCart(cartItems);
+      }
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+    }
   };
 
-  const updateCartQuantity = (productId: string, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === productId) {
-        const newQty = Math.max(0, item.quantity + delta);
-        return { ...item, quantity: newQty };
+  const updateCartQuantity = async (productId: string, delta: number) => {
+    const item = cart.find(i => i.id === productId);
+    if (!item) return;
+    
+    const newQty = item.quantity + delta;
+    if (newQty <= 0) {
+      try {
+        // Find cart item ID and remove
+        await cartService.removeFromCart(productId);
+        setCart(prev => prev.filter(i => i.id !== productId));
+      } catch (error) {
+        console.error('Failed to remove from cart:', error);
       }
-      return item;
-    }).filter(item => item.quantity > 0));
+    } else {
+      try {
+        await cartService.updateCartItem(productId, newQty);
+        setCart(prev => prev.map(i => 
+          i.id === productId ? { ...i, quantity: newQty } : i
+        ));
+      } catch (error) {
+        console.error('Failed to update cart:', error);
+      }
+    }
   };
 
   if (isLoading) {

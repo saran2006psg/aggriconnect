@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Role } from '@/types/types';
+import { authService } from '@/services/authService';
 
 interface ProfileProps {
   navigate: (view: View) => void;
@@ -10,6 +11,12 @@ interface ProfileProps {
 const Profile: React.FC<ProfileProps> = ({ navigate, role, onLogout }) => {
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const userData = authService.getCurrentUserFromStorage();
+    setUser(userData);
+  }, []);
 
   // Toggle Dark Mode
   const toggleDarkMode = () => {
@@ -53,15 +60,16 @@ const Profile: React.FC<ProfileProps> = ({ navigate, role, onLogout }) => {
                    </button>
                </div>
                <h2 className="mt-4 text-xl font-bold text-text-main dark:text-white">
-                 {role === 'farmer' ? 'John Appleseed' : 'Jane Doe'}
+                 {user?.full_name || 'User'}
                </h2>
+               <p className="text-sm text-text-subtle">{user?.email}</p>
                <div className="flex items-center gap-2 mt-1">
                    <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-bold uppercase tracking-wide">
-                     {role === 'farmer' ? 'Farmer' : 'Consumer'}
+                     {user?.role || role}
                    </span>
-                   <span className="text-sm text-text-subtle">
-                     {role === 'farmer' ? 'Green Valley Farm, CA' : 'Brooklyn, NY'}
-                   </span>
+                   {user?.farm_location && (
+                     <span className="text-sm text-text-subtle">{user.farm_location}</span>
+                   )}
                </div>
            </div>
 

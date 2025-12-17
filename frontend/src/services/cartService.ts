@@ -7,12 +7,12 @@ export const cartService = {
   },
 
   async addToCart(productId: string, quantity: number = 1) {
-    const response = await apiClient.post('/cart/items', { productId, quantity });
+    const response = await apiClient.post('/cart/items', { product_id: productId, quantity });
     return response.data;
   },
 
-  async updateCartItem(itemId: string, quantity: number) {
-    const response = await apiClient.put(`/cart/items/${itemId}`, { quantity });
+  async updateCartItem(productId: string, quantity: number) {
+    const response = await apiClient.put(`/cart/items/${productId}`, { quantity });
     return response.data;
   },
 
