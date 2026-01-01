@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Product } from '@/types/types';
+import { Product } from '@/types/types';
 
 interface ProductDetailsProps {
-  navigate: (view: View) => void;
+  navigate: (path: string) => void;
   product: Product;
   onAddToCart: (item: Product, qty: number) => void;
   cartItemCount: number;
@@ -18,11 +18,11 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ navigate, product, onAd
     <div className="relative min-h-screen bg-background-light dark:bg-background-dark pb-28">
       {/* Header */}
       <div className="sticky top-0 z-20 flex justify-between items-center p-4">
-          <button onClick={() => navigate('consumer-home')} className="h-10 w-10 bg-white/80 dark:bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-text-main dark:text-white shadow-sm hover:scale-105 transition-transform">
+          <button onClick={() => navigate('/home')} className="h-10 w-10 bg-white/80 dark:bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-text-main dark:text-white shadow-sm hover:scale-105 transition-transform">
               <span className="material-symbols-outlined">arrow_back_ios_new</span>
           </button>
           <div className="flex gap-2">
-            <button onClick={() => navigate('cart')} className="relative h-10 w-10 bg-white/80 dark:bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-text-main dark:text-white shadow-sm hover:scale-105 transition-transform">
+            <button onClick={() => navigate('/cart')} className="relative h-10 w-10 bg-white/80 dark:bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-text-main dark:text-white shadow-sm hover:scale-105 transition-transform">
                 <span className="material-symbols-outlined">shopping_cart</span>
                 {cartItemCount > 0 && (
                     <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white dark:border-black">
@@ -113,7 +113,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ navigate, product, onAd
       <div className="fixed bottom-0 left-0 right-0 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md p-4 border-t border-border-light dark:border-border-dark z-20">
           <div className="flex gap-4 max-w-md mx-auto">
               <button 
-                onClick={() => navigate('subscriptions')}
+                onClick={() => navigate('/subscriptions')}
                 className="flex-1 h-14 rounded-full border border-primary text-primary font-bold hover:bg-primary/5 active:scale-[0.98] transition-all"
               >
                   Subscribe
@@ -121,7 +121,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ navigate, product, onAd
               <button 
                 onClick={() => {
                     onAddToCart(product, quantity);
-                    navigate('cart');
+                    navigate('/cart');
                 }}
                 className="flex-1 h-14 rounded-full bg-primary text-white font-bold shadow-lg shadow-primary/30 active:scale-[0.98] transition-all flex flex-col items-center justify-center leading-none"
               >

@@ -62,4 +62,6 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Named export for backwards compatibility
+export { apiClient };
 export default apiClient;

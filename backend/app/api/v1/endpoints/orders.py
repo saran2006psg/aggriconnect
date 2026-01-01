@@ -138,7 +138,23 @@ async def create_order(
         # Clear cart
         supabase_admin_client.table("cart_items").delete().eq("cart_id", cart_id).execute()
         
-        # TODO: Send notifications to farmers
+        # Send notifications to farmers
+        unique_farmers = set(item["farmer_id"] for item in order_items)
+        for farmer_id in unique_farmers:
+            try:
+                notification_data = {
+                    "id": str(uuid.uuid4()),
+                    "user_id": farmer_id,
+                    "type": "order_placed",
+                    "title": "New Order Received!",
+                    "message": f"You have a new order #{order_number} worth ${total:.2f}",
+                    "is_read": False,
+                    "created_at": datetime.utcnow().isoformat()
+                }
+                supabase_admin_client.table("notifications").insert(notification_data).execute()
+            except Exception as e:
+                print(f"Failed to create notification: {str(e)}")
+        
         # TODO: Generate QR code
         
         return create_response(
@@ -166,20 +182,27 @@ async def get_orders(
     page: int = Query(1, ge=1),
     perPage: int = Query(20, ge=1, le=100)
 ):
-    """Get user's orders."""
+    """Get user's orders with items."""
     try:
         user = await get_current_user(credentials)
         
-        # Build query based on role
+        # Build query based on role - include order items and products
         if user["role"] == "consumer":
-            query = supabase_admin_client.table("orders").select("*", count="exact").eq("consumer_id", user["id"])
+            query = supabase_admin_client.table("orders").select(
+                "*, order_items(*, products(name, image_url, category))", 
+                count="exact"
+            ).eq("consumer_id", user["id"])
         elif user["role"] == "farmer":
             # Get orders containing farmer's products
             query = supabase_admin_client.table("orders").select(
-                "*, order_items!inner(farmer_id)", count="exact"
+                "*, order_items!inner(*, products(name, image_url, category))", 
+                count="exact"
             ).eq("order_items.farmer_id", user["id"])
         else:  # admin
-            query = supabase_admin_client.table("orders").select("*", count="exact")
+            query = supabase_admin_client.table("orders").select(
+                "*, order_items(*, products(name, image_url, category))", 
+                count="exact"
+            )
         
         # Apply pagination
         offset = (page - 1) * perPage
@@ -323,7 +346,28 @@ async def update_order_status(
         # Update status
         result = supabase_admin_client.table("orders").update({"status": status_update.status}).eq("id", order_id).execute()
         
-        # TODO: Send notification to consumer
+        # Send notification to consumer
+        try:
+            status_messages = {
+                "confirmed": "Your order has been confirmed!",
+                "processing": "Your order is being prepared",
+                "out_for_delivery": "Your order is out for delivery!",
+                "delivered": "Your order has been delivered!",
+                "cancelled": "Your order has been cancelled"
+            }
+            
+            notification_data = {
+                "id": str(uuid.uuid4()),
+                "user_id": order["consumer_id"],
+                "type": f"order_{status_update.status}",
+                "title": "Order Status Update",
+                "message": status_messages.get(status_update.status, f"Order status changed to {status_update.status}"),
+                "is_read": False,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            supabase_admin_client.table("notifications").insert(notification_data).execute()
+        except Exception as e:
+            print(f"Failed to create notification: {str(e)}")
         
         return create_response(
             success=True,

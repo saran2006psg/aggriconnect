@@ -1,9 +1,8 @@
 import React from 'react';
-import { View } from '@/types/types';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AdminDashboardProps {
-  navigate: (view: View) => void;
+  navigate: (path: string) => void;
 }
 
 const data = [
@@ -113,7 +112,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
 
        {/* Floating Nav for Demo to go back */}
        <div className="fixed bottom-6 right-6 z-20">
-           <button onClick={() => navigate('onboarding')} className="h-14 w-14 rounded-full bg-text-main text-white shadow-xl flex items-center justify-center">
+           <button onClick={() => navigate('/')} className="h-14 w-14 rounded-full bg-text-main text-white shadow-xl flex items-center justify-center">
                <span className="material-symbols-outlined">logout</span>
            </button>
        </div>

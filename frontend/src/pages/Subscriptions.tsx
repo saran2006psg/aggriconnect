@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { View } from '@/types/types';
 
 interface SubscriptionsProps {
-  navigate: (view: View) => void;
+  navigate: (path: string) => void;
 }
 
 const Subscriptions: React.FC<SubscriptionsProps> = ({ navigate }) => {
@@ -11,7 +10,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ navigate }) => {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-24">
        <header className="flex items-center p-4 sticky top-0 z-10 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-sm">
-           <button onClick={() => navigate('consumer-home')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
+           <button onClick={() => navigate('/home')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
                <span className="material-symbols-outlined text-text-main dark:text-white">arrow_back_ios_new</span>
            </button>
            <h1 className="flex-1 text-center font-bold text-lg text-text-main dark:text-white pr-10">Farm Box</h1>
@@ -66,7 +65,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ navigate }) => {
                    <p className="text-2xl font-bold text-text-main dark:text-white">$8.10</p>
                    <p className="text-[10px] text-primary font-medium mt-1">Next: Tue, Oct 26</p>
                </div>
-               <button onClick={() => navigate('consumer-home')} className="h-12 px-8 bg-primary text-white font-bold rounded-full shadow-lg shadow-primary/30 active:scale-95 transition-transform">
+               <button onClick={() => navigate('/home')} className="h-12 px-8 bg-primary text-white font-bold rounded-full shadow-lg shadow-primary/30 active:scale-95 transition-transform">
                    Subscribe
                </button>
            </div>

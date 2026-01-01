@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View } from '@/types/types';
 import { orderService } from '@/services/orderService';
 
 interface FarmerOrdersProps {
-  navigate: (view: View) => void;
+  navigate: (path: string) => void;
 }
 
 const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
   const [filter, setFilter] = useState<'All' | 'pending' | 'delivered' | 'cancelled'>('All');
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -28,13 +29,23 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
     }
   };
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: string, confirmMessage?: string) => {
+    if (confirmMessage && !confirm(confirmMessage)) return;
+    
+    setStatusUpdateLoading(true);
     try {
       await orderService.updateOrderStatus(orderId, newStatus);
-      loadOrders(); // Reload orders
+      await loadOrders();
+      if (selectedOrder?.id === orderId) {
+        const updatedOrder = orders.find(o => o.id === orderId);
+        setSelectedOrder(updatedOrder || null);
+      }
+      alert(`Order ${formatStatus(newStatus)}!`);
     } catch (error) {
       console.error('Failed to update order status:', error);
       alert('Failed to update order status');
+    } finally {
+      setStatusUpdateLoading(false);
     }
   };
 
@@ -67,7 +78,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-24">
        <header className="flex items-center p-4 sticky top-0 z-10 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm border-b border-border-light dark:border-border-dark">
-           <button onClick={() => navigate('farmer-dashboard')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+           <button onClick={() => navigate('/farmer-dashboard')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
                <span className="material-symbols-outlined text-text-main dark:text-white">arrow_back_ios_new</span>
            </button>
            <h1 className="flex-1 text-center font-bold text-lg text-text-main dark:text-white pr-10">Manage Orders</h1>
@@ -118,24 +129,70 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                            
                            <div className="flex justify-between items-center py-2 border-t border-b border-border-light dark:border-border-dark my-2 border-dashed">
                                <span className="text-sm font-medium text-text-main dark:text-white">{order.items?.length || 0} items</span>
-                               <span className="text-sm font-bold text-text-main dark:text-white">${parseFloat(order.total_amount).toFixed(2)}</span>
+                               <span className="text-sm font-bold text-text-main dark:text-white">${parseFloat(order.total || order.total_amount || 0).toFixed(2)}</span>
                            </div>
 
-                           <div className="flex items-center justify-between mt-3">
-                               <div className="flex items-center gap-1 text-text-subtle">
-                                   <span className="material-symbols-outlined text-lg">
-                                       {order.type === 'Delivery' ? 'local_shipping' : 'storefront'}
-                                   </span>
-                                   <span className="text-xs font-medium">{order.type}</span>
+                           <div className="mt-3 space-y-2">
+                               <div className="flex items-center justify-between">
+                                   <div className="flex items-center gap-1 text-text-subtle">
+                                       <span className="material-symbols-outlined text-lg">
+                                           {order.delivery_type === 'Delivery' ? 'local_shipping' : 'storefront'}
+                                       </span>
+                                       <span className="text-xs font-medium">{order.delivery_type}</span>
+                                   </div>
+                                   <button 
+                                       onClick={() => setSelectedOrder(order)}
+                                       className="text-primary text-xs font-bold hover:underline"
+                                   >
+                                       View Details
+                                   </button>
                                </div>
-                               {order.status === 'Pending' && (
+                               
+                               {/* Status progression buttons */}
+                               {order.status === 'pending' && (
                                    <div className="flex gap-2">
-                                       <button className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-bold rounded-lg border border-red-100 dark:border-red-800">Reject</button>
-                                       <button className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-md shadow-primary/20">Accept</button>
+                                       <button 
+                                           onClick={() => handleStatusUpdate(order.id, 'cancelled', 'Are you sure you want to reject this order?')}
+                                           disabled={statusUpdateLoading}
+                                           className="flex-1 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-bold rounded-lg border border-red-100 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                                       >
+                                           Reject
+                                       </button>
+                                       <button 
+                                           onClick={() => handleStatusUpdate(order.id, 'confirmed')}
+                                           disabled={statusUpdateLoading}
+                                           className="flex-1 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-md shadow-primary/20 hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                       >
+                                           Accept Order
+                                       </button>
                                    </div>
                                )}
-                               {(order.status === 'Completed' || order.status === 'Cancelled') && (
-                                   <button className="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-main dark:text-white text-xs font-bold rounded-lg">View Details</button>
+                               {order.status === 'confirmed' && (
+                                   <button 
+                                       onClick={() => handleStatusUpdate(order.id, 'processing')}
+                                       disabled={statusUpdateLoading}
+                                       className="w-full px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-lg shadow-md hover:bg-purple-700 transition-colors disabled:opacity-50"
+                                   >
+                                       Start Preparing
+                                   </button>
+                               )}
+                               {order.status === 'processing' && (
+                                   <button 
+                                       onClick={() => handleStatusUpdate(order.id, 'out_for_delivery', 'Mark order as shipped/ready for pickup?')}
+                                       disabled={statusUpdateLoading}
+                                       className="w-full px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                   >
+                                       {order.delivery_type === 'Delivery' ? 'Mark as Shipped' : 'Ready for Pickup'}
+                                   </button>
+                               )}
+                               {order.status === 'out_for_delivery' && (
+                                   <button 
+                                       onClick={() => handleStatusUpdate(order.id, 'delivered', 'Confirm order has been delivered/picked up?')}
+                                       disabled={statusUpdateLoading}
+                                       className="w-full px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg shadow-md hover:bg-green-700 transition-colors disabled:opacity-50"
+                                   >
+                                       Mark as Delivered
+                                   </button>
                                )}
                            </div>
                        </div>
@@ -143,6 +200,140 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                )}
            </div>
        </main>
+
+       {/* Order Detail Modal */}
+       {selectedOrder && (
+         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-4">
+           <div className="bg-background-light dark:bg-background-dark rounded-t-3xl md:rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+             <div className="sticky top-0 bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark p-4 flex items-center justify-between">
+               <h2 className="text-xl font-bold text-text-main dark:text-white">Order Details</h2>
+               <button onClick={() => setSelectedOrder(null)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
+                 <span className="material-symbols-outlined">close</span>
+               </button>
+             </div>
+
+             <div className="p-6 space-y-4">
+               <div className="flex justify-between items-start">
+                 <div>
+                   <p className="text-sm text-text-subtle">Order ID</p>
+                   <p className="font-bold text-text-main dark:text-white">#{selectedOrder.id.slice(0, 8)}</p>
+                 </div>
+                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusStyle(selectedOrder.status)}`}>
+                   {formatStatus(selectedOrder.status)}
+                 </span>
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <p className="text-sm text-text-subtle">Order Date</p>
+                   <p className="font-medium text-text-main dark:text-white">{new Date(selectedOrder.created_at).toLocaleDateString()}</p>
+                 </div>
+                 <div>
+                   <p className="text-sm text-text-subtle">Delivery Type</p>
+                   <p className="font-medium text-text-main dark:text-white">{selectedOrder.delivery_type}</p>
+                 </div>
+               </div>
+
+               <div className="border-t border-border-light dark:border-border-dark pt-4">
+                 <p className="text-sm font-bold text-text-main dark:text-white mb-3">Order Items</p>
+                 <div className="space-y-3">
+                   {selectedOrder.order_items?.map((item: any, index: number) => (
+                     <div key={index} className="flex gap-3 p-3 bg-surface-light dark:bg-surface-dark rounded-xl">
+                       <div className="h-16 w-16 rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0">
+                         {item.products?.image_url ? (
+                           <img src={item.products.image_url} alt={item.products?.name} className="w-full h-full object-cover" />
+                         ) : (
+                           <div className="w-full h-full flex items-center justify-center">
+                             <span className="material-symbols-outlined text-gray-400">potted_plant</span>
+                           </div>
+                         )}
+                       </div>
+                       <div className="flex-1">
+                         <p className="font-medium text-text-main dark:text-white">{item.products?.name || 'Product'}</p>
+                         <p className="text-xs text-text-subtle">{item.products?.category}</p>
+                         <div className="flex justify-between items-center mt-1">
+                           <p className="text-sm text-text-subtle">Qty: {item.quantity}</p>
+                           <p className="font-bold text-primary">${parseFloat(item.subtotal).toFixed(2)}</p>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+
+               <div className="border-t border-border-light dark:border-border-dark pt-4 space-y-2">
+                 <div className="flex justify-between text-sm">
+                   <span className="text-text-subtle">Subtotal</span>
+                   <span className="font-medium text-text-main dark:text-white">${parseFloat(selectedOrder.subtotal).toFixed(2)}</span>
+                 </div>
+                 <div className="flex justify-between text-sm">
+                   <span className="text-text-subtle">Delivery Fee</span>
+                   <span className="font-medium text-text-main dark:text-white">${parseFloat(selectedOrder.delivery_fee || 0).toFixed(2)}</span>
+                 </div>
+                 {selectedOrder.discount > 0 && (
+                   <div className="flex justify-between text-sm">
+                     <span className="text-text-subtle">Discount</span>
+                     <span className="font-medium text-green-600">-${parseFloat(selectedOrder.discount).toFixed(2)}</span>
+                   </div>
+                 )}
+                 <div className="flex justify-between text-lg font-bold border-t border-border-light dark:border-border-dark pt-2">
+                   <span className="text-text-main dark:text-white">Total</span>
+                   <span className="text-primary">${parseFloat(selectedOrder.total).toFixed(2)}</span>
+                 </div>
+               </div>
+
+               {/* Status action buttons in modal */}
+               <div className="border-t border-border-light dark:border-border-dark pt-4">
+                 {selectedOrder.status === 'pending' && (
+                   <div className="flex gap-3">
+                     <button 
+                       onClick={() => handleStatusUpdate(selectedOrder.id, 'cancelled', 'Are you sure you want to reject this order?')}
+                       disabled={statusUpdateLoading}
+                       className="flex-1 px-6 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-xl border border-red-100 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                     >
+                       Reject Order
+                     </button>
+                     <button 
+                       onClick={() => handleStatusUpdate(selectedOrder.id, 'confirmed')}
+                       disabled={statusUpdateLoading}
+                       className="flex-1 px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+                     >
+                       Accept Order
+                     </button>
+                   </div>
+                 )}
+                 {selectedOrder.status === 'confirmed' && (
+                   <button 
+                     onClick={() => handleStatusUpdate(selectedOrder.id, 'processing')}
+                     disabled={statusUpdateLoading}
+                     className="w-full px-6 py-3 bg-purple-600 text-white font-bold rounded-xl shadow-md hover:bg-purple-700 transition-colors disabled:opacity-50"
+                   >
+                     Start Preparing Order
+                   </button>
+                 )}
+                 {selectedOrder.status === 'processing' && (
+                   <button 
+                     onClick={() => handleStatusUpdate(selectedOrder.id, 'out_for_delivery', 'Mark order as shipped/ready for pickup?')}
+                     disabled={statusUpdateLoading}
+                     className="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                   >
+                     {selectedOrder.delivery_type === 'Delivery' ? 'Mark as Shipped' : 'Ready for Pickup'}
+                   </button>
+                 )}
+                 {selectedOrder.status === 'out_for_delivery' && (
+                   <button 
+                     onClick={() => handleStatusUpdate(selectedOrder.id, 'delivered', 'Confirm order has been delivered/picked up?')}
+                     disabled={statusUpdateLoading}
+                     className="w-full px-6 py-3 bg-green-600 text-white font-bold rounded-xl shadow-md hover:bg-green-700 transition-colors disabled:opacity-50"
+                   >
+                     Mark as Delivered
+                   </button>
+                 )}
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
     </div>
   );
 };

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, CartItem } from '@/types/types';
+import { CartItem } from '@/types/types';
 import { orderService } from '@/services/orderService';
 
 interface CartProps {
-  navigate: (view: View) => void;
+  navigate: (path: string) => void;
   cart: CartItem[];
   onUpdateQuantity: (id: string, delta: number) => void;
 }
@@ -27,7 +27,7 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
       });
       
       if (response.success) {
-        navigate('order-tracking');
+        navigate('/order-tracking');
       } else {
         setError(response.message || 'Failed to place order');
       }
@@ -41,7 +41,7 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-28">
       <header className="flex items-center p-4 border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark sticky top-0 z-10">
-           <button onClick={() => navigate('consumer-home')} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+           <button onClick={() => navigate('/home')} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                <span className="material-symbols-outlined text-text-main dark:text-white">arrow_back_ios_new</span>
            </button>
            <h1 className="flex-1 text-center font-bold text-lg text-text-main dark:text-white pr-10">My Cart</h1>
@@ -61,7 +61,7 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
                    </div>
                    <h2 className="text-xl font-bold text-text-main dark:text-white mb-2">Your cart is empty</h2>
                    <p className="text-text-subtle mb-6">Looks like you haven't added anything yet.</p>
-                   <button onClick={() => navigate('consumer-home')} className="px-8 py-3 bg-primary text-white rounded-full font-bold shadow-lg hover:bg-primary/90 transition-colors">Start Shopping</button>
+                   <button onClick={() => navigate('/home')} className="px-8 py-3 bg-primary text-white rounded-full font-bold shadow-lg hover:bg-primary/90 transition-colors">Start Shopping</button>
                </div>
            ) : (
                <>

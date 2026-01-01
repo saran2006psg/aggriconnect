@@ -1,15 +1,14 @@
 import React from 'react';
-import { View } from '@/types/types';
 
 interface BulkOrderProps {
-  navigate: (view: View) => void;
+  navigate: (path: string) => void;
 }
 
 const BulkOrder: React.FC<BulkOrderProps> = ({ navigate }) => {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
        <header className="flex items-center p-4 sticky top-0 z-10 bg-background-light/90 dark:bg-background-dark/90">
-           <button onClick={() => navigate('consumer-home')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
+           <button onClick={() => navigate('/home')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
                <span className="material-symbols-outlined text-text-main dark:text-white">arrow_back</span>
            </button>
            <h1 className="flex-1 text-center font-bold text-lg text-text-main dark:text-white pr-10">Bulk Order</h1>
@@ -83,7 +82,7 @@ const BulkOrder: React.FC<BulkOrderProps> = ({ navigate }) => {
        </main>
 
        <footer className="p-4 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark sticky bottom-0">
-           <button onClick={() => navigate('consumer-home')} className="w-full bg-primary text-white h-14 rounded-xl font-bold text-lg shadow-lg active:scale-[0.98] transition-transform">
+           <button onClick={() => navigate('/home')} className="w-full bg-primary text-white h-14 rounded-xl font-bold text-lg shadow-lg active:scale-[0.98] transition-transform">
                Send Request to Farmers
            </button>
        </footer>

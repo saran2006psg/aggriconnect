@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View } from '@/types/types';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface FarmerWalletProps {
-  navigate: (view: View) => void;
+  navigate: (path: string) => void;
 }
 
 const FarmerWallet: React.FC<FarmerWalletProps> = ({ navigate }) => {
@@ -132,7 +131,7 @@ const FarmerWallet: React.FC<FarmerWalletProps> = ({ navigate }) => {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-6">
        <header className="flex items-center p-4 sticky top-0 z-10 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm border-b border-border-light dark:border-border-dark">
-           <button onClick={() => navigate('farmer-dashboard')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+           <button onClick={() => navigate('/farmer-dashboard')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
                <span className="material-symbols-outlined text-text-main dark:text-white">arrow_back_ios_new</span>
            </button>
            <h1 className="flex-1 text-center font-bold text-lg text-text-main dark:text-white pr-10">Wallet</h1>

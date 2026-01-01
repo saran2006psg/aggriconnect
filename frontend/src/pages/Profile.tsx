@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Role } from '@/types/types';
+import { Role } from '@/types/types';
 import { authService } from '@/services/authService';
 
 interface ProfileProps {
-  navigate: (view: View) => void;
+  navigate: (path: string) => void;
   role: Role;
   onLogout: () => void;
 }
@@ -33,7 +33,7 @@ const Profile: React.FC<ProfileProps> = ({ navigate, role, onLogout }) => {
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col pb-24 transition-colors duration-300">
        <header className="flex items-center p-4 sticky top-0 z-10 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm border-b border-border-light dark:border-border-dark">
            <button 
-             onClick={() => role === 'farmer' ? navigate('farmer-dashboard') : navigate('consumer-home')} 
+             onClick={() => role === 'farmer' ? navigate('/farmer-dashboard') : navigate('/home')} 
              className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
            >
                <span className="material-symbols-outlined text-text-main dark:text-white">arrow_back_ios_new</span>

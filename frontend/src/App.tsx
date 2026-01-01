@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Role, View, Product, CartItem } from '@/types/types';
+import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
+import { Role, Product, CartItem } from '@/types/types';
 import { authService } from '@/services/authService';
 import { productService } from '@/services/productService';
 import { cartService } from '@/services/cartService';
@@ -18,18 +19,25 @@ import Profile from '@pages/Profile';
 import FarmerOrders from '@pages/FarmerOrders';
 import FarmerProducts from '@pages/FarmerProducts';
 import FarmerWallet from '@pages/FarmerWallet';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<View>('onboarding');
+  const routerNavigate = useNavigate();
+  const location = useLocation();
   const [role, setRole] = useState<Role>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Log route changes
+  useEffect(() => {
+    console.log('Current route:', location.pathname);
+  }, [location]);
   
   // App Data State
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Check if user is already logged in
+  // Check if user is already logged in (only on initial mount)
   useEffect(() => {
     const checkAuth = async () => {
       if (authService.isAuthenticated()) {
@@ -37,9 +45,12 @@ export default function App() {
           const user = authService.getCurrentUserFromStorage();
           if (user) {
             setRole(user.role);
-            if (user.role === 'farmer') setCurrentView('farmer-dashboard');
-            else if (user.role === 'admin') setCurrentView('admin-dashboard');
-            else setCurrentView('consumer-home');
+            // Only redirect if we're on the root or login page
+            if (location.pathname === '/' || location.pathname === '/login') {
+              if (user.role === 'farmer') routerNavigate('/farmer-dashboard');
+              else if (user.role === 'admin') routerNavigate('/admin-dashboard');
+              else routerNavigate('/home');
+            }
           }
         } catch (error) {
           console.error('Auth check failed:', error);
@@ -48,9 +59,9 @@ export default function App() {
       setIsLoading(false);
     };
     checkAuth();
-  }, []);
+  }, []); // Empty dependency array - only run once on mount
 
-  // Load products
+  // Load products on mount
   useEffect(() => {
     const loadProducts = async () => {
       try {
@@ -85,34 +96,37 @@ export default function App() {
         console.error('Failed to load products:', error);
       }
     };
+    
     loadProducts();
   }, []);
 
-  const navigate = (view: View) => {
+  const navigate = (path: string) => {
+    console.log('Navigating to:', path);
     window.scrollTo(0, 0);
-    setCurrentView(view);
+    // Force a re-render by using replace: false to ensure route change
+    routerNavigate(path, { replace: false });
   };
 
   const handleRoleSelect = (selectedRole: Role) => {
     setRole(selectedRole);
-    navigate('login');
+    navigate('/login');
   };
 
   const handleLogin = () => {
-    if (role === 'farmer') navigate('farmer-dashboard');
-    else if (role === 'admin') navigate('admin-dashboard');
-    else navigate('consumer-home');
+    if (role === 'farmer') navigate('/farmer-dashboard');
+    else if (role === 'admin') navigate('/admin-dashboard');
+    else navigate('/home');
   };
 
   const handleLogout = () => {
     setRole(null);
     setCart([]);
-    navigate('onboarding');
+    navigate('/');
   };
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
-    navigate('product-details');
+    navigate('/product-details');
   };
 
   // Load cart on mount
@@ -142,7 +156,7 @@ export default function App() {
       }
     };
     loadCart();
-  }, [currentView]);
+  }, []);
 
   // -- Cart Logic --
   const addToCart = async (product: Product, quantity: number = 1) => {
@@ -241,14 +255,12 @@ export default function App() {
     );
   }
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'onboarding':
-        return <Onboarding onRoleSelect={handleRoleSelect} />;
-      case 'login':
-        return <Login onLogin={handleLogin} role={role} onBack={() => navigate('onboarding')} />;
-      case 'consumer-home':
-        return (
+  return (
+    <div className="min-h-screen bg-background-light dark:bg-background-dark transition-colors duration-300">
+      <Routes>
+        <Route path="/" element={<Onboarding onRoleSelect={handleRoleSelect} />} />
+        <Route path="/login" element={<Login onLogin={handleLogin} role={role} onBack={() => navigate('/')} />} />
+        <Route path="/home" element={
           <ConsumerHome 
             navigate={navigate} 
             cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
@@ -256,52 +268,34 @@ export default function App() {
             onProductSelect={handleProductSelect}
             onAddToCart={addToCart}
           />
-        );
-      case 'farmer-dashboard':
-        return <FarmerDashboard navigate={navigate} />;
-      case 'admin-dashboard':
-        return <AdminDashboard navigate={navigate} />;
-      case 'product-details':
-        return (
+        } />
+        <Route path="/farmer-dashboard" element={<FarmerDashboard navigate={navigate} />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard navigate={navigate} />} />
+        <Route path="/product-details" element={
           <ProductDetails 
             navigate={navigate} 
             product={selectedProduct || products[0]} 
             onAddToCart={addToCart} 
             cartItemCount={cart.reduce((acc, item) => acc + item.quantity, 0)}
           />
-        );
-      case 'cart':
-        return (
+        } />
+        <Route path="/cart" element={
           <Cart 
             navigate={navigate} 
             cart={cart} 
             onUpdateQuantity={updateCartQuantity} 
           />
-        );
-      case 'order-tracking':
-        return <OrderTracking navigate={navigate} />;
-      case 'subscriptions':
-        return <Subscriptions navigate={navigate} />;
-      case 'add-product':
-        return <AddProduct navigate={navigate} />;
-      case 'bulk-order':
-        return <BulkOrder navigate={navigate} />;
-      case 'profile':
-        return <Profile navigate={navigate} role={role} onLogout={handleLogout} />;
-      case 'farmer-orders':
-        return <FarmerOrders navigate={navigate} />;
-      case 'farmer-products':
-        return <FarmerProducts navigate={navigate} products={products} />;
-      case 'farmer-wallet':
-        return <FarmerWallet navigate={navigate} />;
-      default:
-        return <Onboarding onRoleSelect={handleRoleSelect} />;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark transition-colors duration-300">
-      {renderView()}
+        } />
+        <Route path="/order-tracking" element={<OrderTracking navigate={navigate} />} />
+        <Route path="/subscriptions" element={<Subscriptions navigate={navigate} />} />
+        <Route path="/add-product" element={<AddProduct navigate={navigate} />} />
+        <Route path="/bulk-order" element={<BulkOrder navigate={navigate} />} />
+        <Route path="/profile" element={<Profile navigate={navigate} role={role} onLogout={handleLogout} />} />
+        <Route path="/farmer-orders" element={<FarmerOrders navigate={navigate} />} />
+        <Route path="/farmer-products" element={<FarmerProducts navigate={navigate} products={products} />} />
+        <Route path="/farmer-wallet" element={<FarmerWallet navigate={navigate} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
   );
 }

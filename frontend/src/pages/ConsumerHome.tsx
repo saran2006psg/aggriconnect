@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Product } from '@/types/types';
+import { Product } from '@/types/types';
+import NotificationBell from '@/components/NotificationBell';
 
 interface ConsumerHomeProps {
-  navigate: (view: View) => void;
+  navigate: (path: string) => void;
   cartCount: number;
   products: Product[];
   onProductSelect: (product: Product) => void;
@@ -34,14 +35,17 @@ const ConsumerHome: React.FC<ConsumerHomeProps> = ({ navigate, cartCount, produc
             <h2 className="text-text-main dark:text-white text-base font-bold leading-tight">Brooklyn, NY</h2>
           </div>
         </div>
-        <button onClick={() => navigate('cart')} className="relative flex items-center justify-center h-12 w-12 rounded-full bg-surface-light dark:bg-surface-dark shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-          <span className="material-symbols-outlined text-text-main dark:text-white">shopping_cart</span>
-          {cartCount > 0 && (
-            <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-background-light dark:border-background-dark">
-              {cartCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <button onClick={() => navigate('/cart')} className="relative flex items-center justify-center h-12 w-12 rounded-full bg-surface-light dark:bg-surface-dark shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            <span className="material-symbols-outlined text-text-main dark:text-white">shopping_cart</span>
+            {cartCount > 0 && (
+              <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-background-light dark:border-background-dark">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -158,19 +162,19 @@ const ConsumerHome: React.FC<ConsumerHomeProps> = ({ navigate, cartCount, produc
       {/* Bottom Nav */}
       <div className="fixed bottom-0 left-0 right-0 bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark p-2 pb-safe z-30">
           <div className="flex justify-around items-center">
-              <button onClick={() => navigate('consumer-home')} className="flex flex-col items-center gap-1 p-2 text-primary">
+              <button onClick={() => navigate('/home')} className="flex flex-col items-center gap-1 p-2 text-primary">
                   <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>home</span>
                   <span className="text-[10px] font-bold">Home</span>
               </button>
-              <button onClick={() => navigate('bulk-order')} className="flex flex-col items-center gap-1 p-2 text-text-subtle dark:text-gray-400 hover:text-primary transition-colors">
+              <button onClick={() => navigate('/bulk-order')} className="flex flex-col items-center gap-1 p-2 text-text-subtle dark:text-gray-400 hover:text-primary transition-colors">
                   <span className="material-symbols-outlined">inventory_2</span>
                   <span className="text-[10px] font-medium">Bulk</span>
               </button>
-              <button onClick={() => navigate('order-tracking')} className="flex flex-col items-center gap-1 p-2 text-text-subtle dark:text-gray-400 hover:text-primary transition-colors">
+              <button onClick={() => navigate('/order-tracking')} className="flex flex-col items-center gap-1 p-2 text-text-subtle dark:text-gray-400 hover:text-primary transition-colors">
                   <span className="material-symbols-outlined">receipt_long</span>
                   <span className="text-[10px] font-medium">Orders</span>
               </button>
-              <button onClick={() => navigate('profile')} className="flex flex-col items-center gap-1 p-2 text-text-subtle dark:text-gray-400 hover:text-primary transition-colors">
+              <button onClick={() => navigate('/profile')} className="flex flex-col items-center gap-1 p-2 text-text-subtle dark:text-gray-400 hover:text-primary transition-colors">
                   <span className="material-symbols-outlined">person</span>
                   <span className="text-[10px] font-medium">Profile</span>
               </button>
