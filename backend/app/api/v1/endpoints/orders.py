@@ -95,7 +95,7 @@ async def create_order(
             "consumer_id": user["id"],
             "delivery_type": order_data.delivery_type,
             "delivery_address_id": order_data.delivery_address_id,
-            "status": "pending",
+            "status": "Pending",
             "subtotal": float(subtotal),
             "delivery_fee": float(delivery_fee),
             "promo_code": order_data.promo_code,

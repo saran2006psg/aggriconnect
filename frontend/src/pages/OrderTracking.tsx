@@ -17,6 +17,13 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
 
   useEffect(() => {
     loadOrders();
+    
+    // Auto-refresh orders every 30 seconds to check for status updates
+    const interval = setInterval(() => {
+      loadOrders();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadOrders = async () => {
@@ -33,19 +40,20 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
   };
 
   const getStatusColor = (status: string) => {
+    const normalizedStatus = status.toLowerCase().replace(/ /g, '_');
     const statusMap: any = {
-      'pending': 'bg-yellow-500/10 text-yellow-600',
-      'confirmed': 'bg-blue-500/10 text-blue-600',
-      'processing': 'bg-purple-500/10 text-purple-600',
+      'pending': 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+      'confirmed': 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+      'processing': 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
       'out_for_delivery': 'bg-primary/10 text-primary',
-      'delivered': 'bg-green-500/10 text-green-600',
-      'cancelled': 'bg-red-500/10 text-red-600'
+      'delivered': 'bg-green-500/10 text-green-600 dark:text-green-400',
+      'cancelled': 'bg-red-500/10 text-red-600 dark:text-red-400'
     };
-    return statusMap[status] || 'bg-gray-500/10 text-gray-600';
+    return statusMap[normalizedStatus] || 'bg-gray-500/10 text-gray-600';
   };
 
   const formatStatus = (status: string) => {
-    return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    return status.split(/[_\s]/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
   };
 
   const handleCancelOrder = async (orderId: string) => {

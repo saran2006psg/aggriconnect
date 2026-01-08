@@ -74,17 +74,25 @@ const AddProduct: React.FC<AddProductProps> = ({ navigate }) => {
       if (imageFile) {
         setIsUploadingImage(true);
         try {
+          console.log('Uploading image...');
           const uploadResponse = await uploadService.uploadProductImage(imageFile);
+          console.log('Upload response:', uploadResponse);
+          
           if (uploadResponse.success) {
             imageUrl = uploadResponse.data.url;
+            console.log('Image uploaded successfully:', imageUrl);
           } else {
-            setError('Failed to upload image');
+            const errorMsg = uploadResponse.message || uploadResponse.errors?.storage || 'Failed to upload image';
+            console.error('Upload failed:', uploadResponse);
+            setError(errorMsg);
             setIsLoading(false);
             setIsUploadingImage(false);
             return;
           }
-        } catch (err) {
-          setError('Failed to upload image');
+        } catch (err: any) {
+          console.error('Upload error:', err);
+          const errorMsg = err.response?.data?.message || err.response?.data?.errors?.storage || 'Failed to upload image';
+          setError(errorMsg);
           setIsLoading(false);
           setIsUploadingImage(false);
           return;
@@ -140,7 +148,12 @@ const AddProduct: React.FC<AddProductProps> = ({ navigate }) => {
              onClick={handleImageClick}
              className="w-full aspect-video rounded-2xl border-2 border-dashed border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex flex-col items-center justify-center text-text-subtle mb-6 cursor-pointer hover:border-primary transition-colors overflow-hidden relative"
            >
-             {imagePreview ? (
+             {isUploadingImage ? (
+               <div className="flex flex-col items-center">
+                 <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+                 <span className="text-sm font-medium text-text-main dark:text-white">Uploading image...</span>
+               </div>
+             ) : imagePreview ? (
                <>
                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">

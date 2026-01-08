@@ -2,12 +2,24 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1.api import api_router
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    from app.services.order_scheduler import start_order_scheduler
+    start_order_scheduler()
+    print("✅ Order auto-completion scheduler started")
+    yield
+    # Shutdown
+    print("👋 Shutting down...")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description="AgriConnect API - Connecting farmers and consumers",
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
 
 # Configure CORS

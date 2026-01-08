@@ -6,9 +6,10 @@ interface CartProps {
   navigate: (path: string) => void;
   cart: CartItem[];
   onUpdateQuantity: (id: string, delta: number) => void;
+  isLoading?: boolean;
 }
 
-const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
+const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading = false }) => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [deliveryType, setDeliveryType] = useState<'Delivery' | 'Pickup'>('Delivery');
   const [error, setError] = useState('');
@@ -54,7 +55,20 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity }) => {
              </div>
            )}
            
-           {cart.length === 0 ? (
+           {isLoading ? (
+               <div className="space-y-4">
+                   {[1, 2, 3].map((i) => (
+                       <div key={i} className="flex gap-4 p-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark animate-pulse">
+                           <div className="h-20 w-20 rounded-xl bg-gray-300 dark:bg-gray-700 shrink-0"></div>
+                           <div className="flex-1 space-y-2">
+                               <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4"></div>
+                               <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+                               <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/3"></div>
+                           </div>
+                       </div>
+                   ))}
+               </div>
+           ) : cart.length === 0 ? (
                <div className="flex flex-col items-center justify-center py-20 text-center">
                    <div className="h-24 w-24 bg-surface-light dark:bg-surface-dark rounded-full flex items-center justify-center mb-4">
                        <span className="material-symbols-outlined text-4xl text-text-subtle">shopping_basket</span>

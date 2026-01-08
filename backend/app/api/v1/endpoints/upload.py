@@ -65,11 +65,31 @@ async def upload_product_image(
         filename = f"products/{user['id']}/{uuid.uuid4()}.{file_ext}"
         
         # Upload to Supabase Storage
-        storage = supabase_admin_client.storage.from_("products")
-        result = storage.upload(filename, contents)
-        
-        # Get public URL
-        public_url = storage.get_public_url(filename)
+        try:
+            storage = supabase_admin_client.storage.from_("products")
+            
+            # Upload file (upsert=True allows overwriting if exists)
+            result = storage.upload(
+                path=filename,
+                file=contents,
+                file_options={"content-type": file.content_type, "upsert": "true"}
+            )
+            
+            # Get public URL
+            public_url = storage.get_public_url(filename)
+            print(f"Upload successful: {public_url}")
+        except Exception as storage_error:
+            # Log the actual error for debugging
+            import traceback
+            print(f"Storage upload failed: {storage_error}")
+            print(f"Traceback: {traceback.format_exc()}")
+            
+            # Return error instead of using placeholder
+            return create_response(
+                success=False,
+                message=f"Failed to upload to storage: {str(storage_error)}",
+                errors={"storage": str(storage_error)}
+            )
         
         return create_response(
             success=True,
@@ -126,11 +146,30 @@ async def upload_profile_image(
         filename = f"profiles/{user['id']}/{uuid.uuid4()}.jpg"
         
         # Upload to Supabase Storage
-        storage = supabase_admin_client.storage.from_("profiles")
-        result = storage.upload(filename, contents)
-        
-        # Get public URL
-        public_url = storage.get_public_url(filename)
+        try:
+            storage = supabase_admin_client.storage.from_("profiles")
+            
+            # Upload file
+            result = storage.upload(
+                path=filename,
+                file=contents,
+                file_options={"content-type": "image/jpeg"}
+            )
+            
+            # Get public URL
+            public_url = storage.get_public_url(filename)
+        except Exception as storage_error:
+            # Log the actual error
+            import traceback
+            print(f"Storage upload failed: {storage_error}")
+            print(f"Traceback: {traceback.format_exc()}")
+            
+            # Return error
+            return create_response(
+                success=False,
+                message=f"Failed to upload to storage: {str(storage_error)}",
+                errors={"storage": str(storage_error)}
+            )
         
         # Update user profile
         supabase_admin_client.table("users").update({"profile_image_url": public_url}).eq("id", user["id"]).execute()

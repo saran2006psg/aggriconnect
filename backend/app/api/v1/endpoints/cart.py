@@ -65,11 +65,61 @@ async def get_cart_with_items(cart_id: str, user_id: str):
 async def get_cart(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Get user's cart."""
+    """Get user's cart - optimized single query."""
     try:
         user = await get_current_user(credentials)
-        cart_id = await get_or_create_cart(user["id"])
-        cart = await get_cart_with_items(cart_id, user["id"])
+        
+        # Optimized: Single query with LEFT JOIN to get cart and items together
+        # This avoids the separate "get or create cart" query
+        items_result = supabase_admin_client.table("cart_items").select(
+            "id, quantity, cart_id, products(id, name, price, unit, image_url), carts!inner(user_id)"
+        ).eq("carts.user_id", user["id"]).execute()
+        
+        # If no cart exists, create one and return empty cart
+        if not items_result.data:
+            cart_id = await get_or_create_cart(user["id"])
+            return create_response(
+                success=True,
+                message="Cart retrieved successfully",
+                data={
+                    "id": cart_id,
+                    "user_id": user["id"],
+                    "items": [],
+                    "total": 0,
+                    "item_count": 0
+                }
+            )
+        
+        # Process items
+        cart_items = []
+        total = Decimal("0")
+        cart_id = items_result.data[0]["cart_id"]
+        
+        for item in items_result.data:
+            product = item["products"]
+            subtotal = Decimal(str(product["price"])) * item["quantity"]
+            
+            cart_item = {
+                "id": item["id"],
+                "product_id": product["id"],
+                "product_name": product["name"],
+                "price": Decimal(str(product["price"])),
+                "unit": product["unit"],
+                "image_url": product.get("image_url"),
+                "farmer": "",  # Removed farmer query for speed - can add back if needed
+                "quantity": item["quantity"],
+                "subtotal": subtotal
+            }
+            cart_items.append(cart_item)
+            total += subtotal
+        
+        cart = {
+            "id": cart_id,
+            "user_id": user["id"],
+            "items": cart_items,
+            "total": total,
+            "item_count": len(cart_items)
+        }
         
         return create_response(
             success=True,
@@ -94,13 +144,13 @@ async def add_to_cart(
     item: CartItemAdd,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Add item to cart."""
+    """Add item to cart - optimized for speed."""
     try:
         user = await get_current_user(credentials)
         cart_id = await get_or_create_cart(user["id"])
         
-        # Check if product exists and is available
-        product_result = supabase_admin_client.table("products").select("id, is_available, stock_quantity").eq("id", item.product_id).execute()
+        # Single optimized query - check product and get existing cart item
+        product_result = supabase_admin_client.table("products").select("id, is_available, stock_quantity").eq("id", item.product_id).maybe_single().execute()
         
         if not product_result.data:
             return create_response(
@@ -109,7 +159,7 @@ async def add_to_cart(
                 errors={"product": "Product does not exist"}
             )
         
-        product = product_result.data[0]
+        product = product_result.data
         
         if not product["is_available"]:
             return create_response(
@@ -118,36 +168,42 @@ async def add_to_cart(
                 errors={"product": "This product is currently unavailable"}
             )
         
-        if product["stock_quantity"] < item.quantity:
-            return create_response(
-                success=False,
-                message="Insufficient stock",
-                errors={"product": f"Only {product['stock_quantity']} items available"}
-            )
-        
-        # Check if item already in cart
-        existing = supabase_admin_client.table("cart_items").select("id, quantity").eq("cart_id", cart_id).eq("product_id", item.product_id).execute()
+        # Check if item already in cart (combined query)
+        existing = supabase_admin_client.table("cart_items").select("id, quantity").eq("cart_id", cart_id).eq("product_id", item.product_id).maybe_single().execute()
         
         if existing.data:
             # Update quantity
-            new_quantity = existing.data[0]["quantity"] + item.quantity
-            supabase_admin_client.table("cart_items").update({"quantity": new_quantity}).eq("id", existing.data[0]["id"]).execute()
+            new_quantity = existing.data["quantity"] + item.quantity
+            if product["stock_quantity"] < new_quantity:
+                return create_response(
+                    success=False,
+                    message="Insufficient stock",
+                    errors={"product": f"Only {product['stock_quantity']} items available"}
+                )
+            result = supabase_admin_client.table("cart_items").update({"quantity": new_quantity}).eq("id", existing.data["id"]).execute()
+            item_data = result.data[0] if result.data else existing.data
         else:
             # Add new item
+            if product["stock_quantity"] < item.quantity:
+                return create_response(
+                    success=False,
+                    message="Insufficient stock",
+                    errors={"product": f"Only {product['stock_quantity']} items available"}
+                )
             new_item = {
                 "id": str(uuid.uuid4()),
                 "cart_id": cart_id,
                 "product_id": item.product_id,
                 "quantity": item.quantity
             }
-            supabase_admin_client.table("cart_items").insert(new_item).execute()
+            result = supabase_admin_client.table("cart_items").insert(new_item).execute()
+            item_data = result.data[0] if result.data else new_item
         
-        cart = await get_cart_with_items(cart_id, user["id"])
-        
+        # Return lightweight response instead of full cart
         return create_response(
             success=True,
             message="Item added to cart",
-            data=cart
+            data={"item": item_data}
         )
     except HTTPException as e:
         return create_response(
@@ -193,14 +249,13 @@ async def update_cart_item(
                 errors={"product": f"Only {product_result.data[0]['stock_quantity']} items available"}
             )
         
-        supabase_admin_client.table("cart_items").update({"quantity": update.quantity}).eq("id", item_id).execute()
+        result = supabase_admin_client.table("cart_items").update({"quantity": update.quantity}).eq("id", item_id).execute()
         
-        cart = await get_cart_with_items(cart_id, user["id"])
-        
+        # Return lightweight response instead of full cart
         return create_response(
             success=True,
-            message="Cart item updated",
-            data=cart
+            message="Cart updated successfully",
+            data={"item": result.data[0] if result.data else None}
         )
     except HTTPException as e:
         return create_response(
