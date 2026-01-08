@@ -7,20 +7,28 @@ interface CartProps {
   cart: CartItem[];
   onUpdateQuantity: (id: string, delta: number) => void;
   isLoading?: boolean;
+  onClearCart?: () => void;
 }
 
-const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading = false }) => {
+const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading = false, onClearCart }) => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [deliveryType, setDeliveryType] = useState<'Delivery' | 'Pickup'>('Delivery');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const deliveryFee = subtotal > 0 && deliveryType === 'Delivery' ? 2.99 : 0;
   const total = subtotal + deliveryFee;
 
   const handlePlaceOrder = async () => {
+    if (cart.length === 0) {
+      setError('Your cart is empty');
+      return;
+    }
+
     setIsPlacingOrder(true);
     setError('');
+    setSuccess('');
     
     try {
       const response = await orderService.createOrder({
@@ -28,12 +36,22 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading
       });
       
       if (response.success) {
-        navigate('/order-tracking');
+        setSuccess(`Order #${response.data.order_number} placed successfully!`);
+        // Clear cart
+        if (onClearCart) {
+          onClearCart();
+        }
+        // Navigate immediately with timestamp to force page reload
+        setTimeout(() => {
+          navigate('/order-tracking?t=' + Date.now());
+        }, 800);
       } else {
         setError(response.message || 'Failed to place order');
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.response?.data?.message || 'Failed to place order');
+      const errorMsg = err.response?.data?.message || err.response?.data?.errors?.server || 'Failed to place order';
+      setError(errorMsg);
+      console.error('Order placement error:', err);
     } finally {
       setIsPlacingOrder(false);
     }
@@ -52,6 +70,12 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading
            {error && (
              <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm">
                {error}
+             </div>
+           )}
+           
+           {success && (
+             <div className="mb-4 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-sm font-medium">
+               {success}
              </div>
            )}
            

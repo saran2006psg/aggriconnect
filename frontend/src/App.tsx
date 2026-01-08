@@ -188,6 +188,11 @@ export default function App() {
     navigate('/');
   };
 
+  const clearCart = () => {
+    setCart([]);
+    localStorage.removeItem('cart_cache');
+  };
+
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
     navigate('/product-details');
@@ -396,6 +401,7 @@ export default function App() {
             cart={cart} 
             onUpdateQuantity={updateCartQuantity}
             isLoading={cartLoading}
+            onClearCart={clearCart}
           />
         } />
         <Route path="/order-tracking" element={<OrderTracking navigate={navigate} />} />

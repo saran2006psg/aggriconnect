@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { orderService } from '@/services/orderService';
 import { apiClient } from '@/services/apiClient';
 import ReviewModal from '@/components/ReviewModal';
@@ -9,6 +10,7 @@ interface OrderTrackingProps {
 
 
 const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
+  const location = useLocation();
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -16,6 +18,7 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
   const [reviewProduct, setReviewProduct] = useState<{id: string, name: string} | null>(null);
 
   useEffect(() => {
+    // Load orders immediately when component mounts or URL changes
     loadOrders();
     
     // Auto-refresh orders every 30 seconds to check for status updates
@@ -24,13 +27,24 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
     }, 30000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [location.search]); // Reload when query params change (e.g., ?t=timestamp)
 
   const loadOrders = async () => {
+    setIsLoading(true); // Show loading state
     try {
+      console.log('📦 Loading orders...');
       const response = await orderService.getOrders();
       if (response.success) {
-        setOrders(response.data.items || []);
+        const ordersData = response.data.items || [];
+        console.log(`✅ Loaded ${ordersData.length} orders`);
+        // Sort orders by created_at descending (newest first)
+        const sortedOrders = ordersData.sort((a: any, b: any) => {
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+        setOrders(sortedOrders);
+        if (sortedOrders.length > 0) {
+          console.log('Latest order:', sortedOrders[0].order_number, sortedOrders[0].status);
+        }
       }
     } catch (error) {
       console.error('Failed to load orders:', error);
@@ -76,12 +90,14 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
   };
 
   const getStatusProgress = (status: string) => {
+    const normalizedStatus = status.toLowerCase().replace(/ /g, '_');
     const steps = ['pending', 'confirmed', 'processing', 'out_for_delivery', 'delivered'];
-    const currentIndex = steps.indexOf(status);
+    const currentIndex = steps.indexOf(normalizedStatus);
     return currentIndex >= 0 ? ((currentIndex + 1) / steps.length) * 100 : 0;
   };
 
   const getStatusIcon = (status: string) => {
+    const normalizedStatus = status.toLowerCase().replace(/ /g, '_');
     const icons: any = {
       'pending': 'schedule',
       'confirmed': 'task_alt',
@@ -90,7 +106,7 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
       'delivered': 'check_circle',
       'cancelled': 'cancel'
     };
-    return icons[status] || 'pending';
+    return icons[normalizedStatus] || 'pending';
   };
 
   const handleSubmitReview = async (rating: number, comment: string) => {
@@ -124,11 +140,14 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
-       <header className="flex items-center p-4 sticky top-0 z-10">
+       <header className="flex items-center p-4 sticky top-0 z-10 bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
            <button onClick={() => navigate('/home')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
                <span className="material-symbols-outlined text-text-main dark:text-white">arrow_back_ios_new</span>
            </button>
-           <h1 className="flex-1 text-center font-bold text-lg text-text-main dark:text-white pr-10">Order Tracking</h1>
+           <h1 className="flex-1 text-center font-bold text-lg text-text-main dark:text-white">Order Tracking</h1>
+           <button onClick={() => loadOrders()} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10" disabled={isLoading}>
+               <span className={`material-symbols-outlined text-text-main dark:text-white ${isLoading ? 'animate-spin' : ''}`}>refresh</span>
+           </button>
        </header>
 
        <main className="flex-1 p-4 pb-24">
@@ -151,9 +170,11 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                  >
                    <div className="flex justify-between items-start mb-3">
                      <div>
-                       <h3 className="font-bold text-text-main dark:text-white">Order #{order.id.slice(0, 8)}</h3>
-                       <p className="text-sm text-text-subtle">{order.order_items?.length || 0} Items • ${parseFloat(order.total || order.total_amount).toFixed(2)}</p>
-                       <p className="text-xs text-text-subtle mt-1">{new Date(order.created_at).toLocaleDateString()}</p>
+                       <h3 className="font-bold text-text-main dark:text-white">Order #{order.order_number || 'AC-' + order.id.slice(0, 4).toUpperCase()}</h3>
+                       <p className="text-sm text-text-subtle">{order.order_items?.length || 0} Items • ${Number(order.total || 0).toFixed(2)}</p>
+                       <p className="text-xs text-text-subtle mt-1">
+                         {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(order.created_at).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}
+                       </p>
                      </div>
                      <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(order.status)}`}>
                        {formatStatus(order.status)}
@@ -241,7 +262,8 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                        { status: 'delivered', label: 'Delivered', icon: 'check_circle' }
                      ].map((step, index) => {
                        const steps = ['pending', 'confirmed', 'processing', 'out_for_delivery', 'delivered'];
-                       const currentIndex = steps.indexOf(selectedOrder.status);
+                       const normalizedOrderStatus = selectedOrder.status.toLowerCase().replace(/ /g, '_');
+                       const currentIndex = steps.indexOf(normalizedOrderStatus);
                        const stepIndex = steps.indexOf(step.status);
                        const isCompleted = stepIndex <= currentIndex;
                        const isCurrent = stepIndex === currentIndex;
@@ -280,16 +302,18 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                <div>
                  <div className="grid grid-cols-2 gap-4 mb-4">
                    <div>
-                     <p className="text-sm text-text-subtle">Order ID</p>
-                     <p className="font-bold text-text-main dark:text-white">#{selectedOrder.id.slice(0, 8)}</p>
+                     <p className="text-sm text-text-subtle">Order Number</p>
+                     <p className="font-bold text-text-main dark:text-white">#{selectedOrder.order_number || 'AC-' + selectedOrder.id.slice(0, 4).toUpperCase()}</p>
                    </div>
                    <div>
                      <p className="text-sm text-text-subtle">Order Date</p>
-                     <p className="font-medium text-text-main dark:text-white">{new Date(selectedOrder.created_at).toLocaleDateString()}</p>
+                     <p className="font-medium text-text-main dark:text-white">
+                       {new Date(selectedOrder.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                     </p>
                    </div>
                    <div>
                      <p className="text-sm text-text-subtle">Delivery Type</p>
-                     <p className="font-medium text-text-main dark:text-white">{selectedOrder.delivery_type}</p>
+                     <p className="font-medium text-text-main dark:text-white">{selectedOrder.delivery_type || 'Delivery'}</p>
                    </div>
                    <div>
                      <p className="text-sm text-text-subtle">Payment Status</p>
@@ -315,10 +339,10 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                        </div>
                        <div className="flex-1">
                          <p className="font-medium text-text-main dark:text-white">{item.products?.name || 'Product'}</p>
-                         <p className="text-xs text-text-subtle">{item.products?.category}</p>
+                         <p className="text-xs text-text-subtle">{item.products?.category || ''}</p>
                          <div className="flex justify-between items-center mt-1">
                            <p className="text-sm text-text-subtle">Qty: {item.quantity}</p>
-                           <p className="font-bold text-primary">${parseFloat(item.subtotal).toFixed(2)}</p>
+                           <p className="font-bold text-primary">${Number(item.subtotal || 0).toFixed(2)}</p>
                          </div>
                        </div>
                      </div>
@@ -330,21 +354,21 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                <div className="border-t border-border-light dark:border-border-dark pt-4 space-y-2">
                  <div className="flex justify-between text-sm">
                    <span className="text-text-subtle">Subtotal</span>
-                   <span className="font-medium text-text-main dark:text-white">${parseFloat(selectedOrder.subtotal).toFixed(2)}</span>
+                   <span className="font-medium text-text-main dark:text-white">${Number(selectedOrder.subtotal || 0).toFixed(2)}</span>
                  </div>
                  <div className="flex justify-between text-sm">
                    <span className="text-text-subtle">Delivery Fee</span>
-                   <span className="font-medium text-text-main dark:text-white">${parseFloat(selectedOrder.delivery_fee || 0).toFixed(2)}</span>
+                   <span className="font-medium text-text-main dark:text-white">${Number(selectedOrder.delivery_fee || 0).toFixed(2)}</span>
                  </div>
                  {selectedOrder.discount > 0 && (
                    <div className="flex justify-between text-sm">
                      <span className="text-text-subtle">Discount</span>
-                     <span className="font-medium text-green-600">-${parseFloat(selectedOrder.discount).toFixed(2)}</span>
+                     <span className="font-medium text-green-600">-${Number(selectedOrder.discount || 0).toFixed(2)}</span>
                    </div>
                  )}
                  <div className="flex justify-between text-lg font-bold border-t border-border-light dark:border-border-dark pt-2">
                    <span className="text-text-main dark:text-white">Total</span>
-                   <span className="text-primary">${parseFloat(selectedOrder.total || selectedOrder.total_amount).toFixed(2)}</span>
+                   <span className="text-primary">${Number(selectedOrder.total || 0).toFixed(2)}</span>
                  </div>
                </div>
 
