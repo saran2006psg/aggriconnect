@@ -130,6 +130,87 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
     }
   };
 
+  const handlePrintInvoice = (order: any) => {
+    const invoiceContent = `
+      <html>
+        <head>
+          <title>Invoice - Order #${order.order_number}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .info { margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f3f4f6; }
+            .total { font-size: 18px; font-weight: bold; text-align: right; }
+            .footer { margin-top: 40px; text-align: center; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🌾 AgriConnect</h1>
+            <h2>Order Invoice</h2>
+          </div>
+          
+          <div class="info">
+            <p><strong>Order Number:</strong> ${order.order_number || 'AC-' + order.id.slice(0, 4).toUpperCase()}</p>
+            <p><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
+            <p><strong>Order Status:</strong> ${formatStatus(order.status)}</p>
+            <p><strong>Customer:</strong> ${order.consumer_name || 'N/A'}</p>
+            ${order.delivery_address ? `
+              <p><strong>Delivery Address:</strong><br/>
+              ${order.delivery_address.street_address}<br/>
+              ${order.delivery_address.city}, ${order.delivery_address.state} ${order.delivery_address.zip_code}</p>
+            ` : ''}
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.order_items?.map((item: any) => `
+                <tr>
+                  <td>${item.products?.name || 'Product'}</td>
+                  <td>${item.quantity}</td>
+                  <td>$${Number(item.price_at_purchase || 0).toFixed(2)}</td>
+                  <td>$${Number(item.subtotal || 0).toFixed(2)}</td>
+                </tr>
+              `).join('') || ''}
+            </tbody>
+          </table>
+          
+          <div class="total">
+            <p>Subtotal: $${Number(order.subtotal || 0).toFixed(2)}</p>
+            <p>Delivery Fee: $${Number(order.delivery_fee || 0).toFixed(2)}</p>
+            ${order.discount > 0 ? `<p>Discount: -$${Number(order.discount || 0).toFixed(2)}</p>` : ''}
+            <p style="font-size: 20px; margin-top: 10px;">Total: $${Number(order.total || 0).toFixed(2)}</p>
+          </div>
+          
+          <div class="footer">
+            <p>Thank you for shopping with AgriConnect!</p>
+            <p>Support: support@agriconnect.com | Phone: 1-800-AGRI-CON</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(invoiceContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
@@ -252,6 +333,38 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                    </span>
                  </div>
                  
+                 {/* Estimated Delivery Time */}
+                 {selectedOrder.estimated_delivery && selectedOrder.status !== 'delivered' && selectedOrder.status !== 'cancelled' && (
+                   <div className="mb-4 p-3 bg-primary/10 rounded-lg flex items-center gap-3">
+                     <span className="material-symbols-outlined text-primary">schedule</span>
+                     <div>
+                       <p className="text-sm font-medium text-text-main dark:text-white">Estimated Delivery</p>
+                       <p className="text-xs text-text-subtle">
+                         {new Date(selectedOrder.estimated_delivery).toLocaleDateString('en-US', { 
+                           month: 'short', day: 'numeric', year: 'numeric',
+                           hour: '2-digit', minute: '2-digit'
+                         })}
+                       </p>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {/* Delivered Time */}
+                 {selectedOrder.delivered_at && (
+                   <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center gap-3">
+                     <span className="material-symbols-outlined text-green-600">check_circle</span>
+                     <div>
+                       <p className="text-sm font-medium text-green-600">Delivered On</p>
+                       <p className="text-xs text-green-600/80">
+                         {new Date(selectedOrder.delivered_at).toLocaleDateString('en-US', { 
+                           month: 'short', day: 'numeric', year: 'numeric',
+                           hour: '2-digit', minute: '2-digit'
+                         })}
+                       </p>
+                     </div>
+                   </div>
+                 )}
+                 
                  {selectedOrder.status !== 'cancelled' && (
                    <div className="space-y-3 mt-4">
                      {[
@@ -320,6 +433,45 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                      <p className="font-medium text-green-600">Paid</p>
                    </div>
                  </div>
+                 
+                 {/* Farmer Contact Information */}
+                 {selectedOrder.farmer_contacts && selectedOrder.farmer_contacts.length > 0 && (
+                   <div className="mt-4 p-4 bg-surface-light dark:bg-surface-dark rounded-xl">
+                     <p className="text-sm font-bold text-text-main dark:text-white mb-3 flex items-center gap-2">
+                       <span className="material-symbols-outlined text-sm">phone</span>
+                       Farmer Contact
+                     </p>
+                     {selectedOrder.farmer_contacts.map((contact: any, idx: number) => (
+                       <div key={idx} className="flex items-center justify-between py-2 border-t border-border-light dark:border-border-dark first:border-0">
+                         <div>
+                           <p className="font-medium text-text-main dark:text-white">{contact.farmer_name}</p>
+                           <p className="text-xs text-text-subtle">Farmer</p>
+                         </div>
+                         {contact.phone_number && (
+                           <a 
+                             href={`tel:${contact.phone_number}`}
+                             className="px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors"
+                           >
+                             📞 Call
+                           </a>
+                         )}
+                       </div>
+                     ))}
+                   </div>
+                 )}
+                 
+                 {/* Delivery Address */}
+                 {selectedOrder.delivery_address && (
+                   <div className="mt-4 p-4 bg-surface-light dark:bg-surface-dark rounded-xl">
+                     <p className="text-sm font-bold text-text-main dark:text-white mb-2 flex items-center gap-2">
+                       <span className="material-symbols-outlined text-sm">location_on</span>
+                       Delivery Address
+                     </p>
+                     <p className="text-sm text-text-subtle">
+                       {selectedOrder.delivery_address.street_address}, {selectedOrder.delivery_address.city}, {selectedOrder.delivery_address.state} {selectedOrder.delivery_address.zip_code}
+                     </p>
+                   </div>
+                 )}
                </div>
 
                {/* Order Items */}
@@ -374,6 +526,15 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
 
                {/* Action Buttons */}
                <div className="border-t border-border-light dark:border-border-dark pt-4 space-y-3">
+                 {/* Print Invoice*/}
+                 <button 
+                   onClick={() => handlePrintInvoice(selectedOrder)}
+                   className="w-full px-6 py-3 bg-surface-light dark:bg-surface-dark text-text-main dark:text-white font-bold rounded-xl border border-border-light dark:border-border-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                 >
+                   <span className="material-symbols-outlined text-lg">print</span>
+                   Print Invoice
+                 </button>
+                 
                  {(selectedOrder.status === 'pending' || selectedOrder.status === 'confirmed') && (
                    <button 
                      onClick={() => handleCancelOrder(selectedOrder.id)}

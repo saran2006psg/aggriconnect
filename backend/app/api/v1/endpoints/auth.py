@@ -137,15 +137,20 @@ async def register(user_data: UserCreate):
 async def google_auth(auth_data: GoogleAuthRequest):
     """Authenticate with Google OAuth."""
     try:
+        print(f"🔐 Google OAuth request received for role: {auth_data.role}")
+        
         # Verify Google token
         google_user = verify_google_token(auth_data.token)
         
         if not google_user:
+            print("❌ Google token verification failed")
             return create_response(
                 success=False,
-                message="Invalid Google token",
+                message="Invalid Google token. Make sure GOOGLE_CLIENT_ID is set correctly in backend .env",
                 errors={"token": "Failed to verify Google token"}
             )
+        
+        print(f"✅ Google user verified: {google_user.get('email')}")
         
         # Check if user exists
         result = supabase_admin_client.table("users").select("*").eq("email", google_user["email"]).execute()
@@ -153,8 +158,10 @@ async def google_auth(auth_data: GoogleAuthRequest):
         if result.data:
             # Existing user
             user = result.data[0]
+            print(f"✅ Existing user found: {user['email']}")
         else:
             # Create new user
+            print(f"📝 Creating new user: {google_user['email']}")
             new_user = {
                 "id": str(uuid.uuid4()),
                 "email": google_user["email"],
@@ -169,6 +176,7 @@ async def google_auth(auth_data: GoogleAuthRequest):
             result = supabase_admin_client.table("users").insert(new_user).execute()
             
             if not result.data:
+                print("❌ Failed to create user in database")
                 return create_response(
                     success=False,
                     message="Failed to create user",
@@ -176,6 +184,7 @@ async def google_auth(auth_data: GoogleAuthRequest):
                 )
             
             user = result.data[0]
+            print(f"✅ New user created successfully")
         
         # Create tokens
         access_token = create_access_token({"sub": user["id"], "role": user["role"]})
@@ -184,6 +193,7 @@ async def google_auth(auth_data: GoogleAuthRequest):
         # Remove password hash from response
         user.pop("password_hash", None)
         
+        print(f"✅ Google auth successful for: {user['email']}")
         return create_response(
             success=True,
             message="Google authentication successful",
@@ -194,9 +204,12 @@ async def google_auth(auth_data: GoogleAuthRequest):
             }
         )
     except Exception as e:
+        print(f"❌ Google auth error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return create_response(
             success=False,
-            message="Google authentication failed",
+            message=f"Google authentication failed: {str(e)}",
             errors={"server": str(e)}
         )
 

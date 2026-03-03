@@ -235,13 +235,13 @@ async def get_order(
     order_id: str,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Get order details."""
+    """Get order details with tracking history."""
     try:
         user = await get_current_user(credentials)
         
         # Get order
         order_result = supabase_admin_client.table("orders").select(
-            "*, users!orders_consumer_id_fkey(full_name), addresses(*)"
+            "*, users!orders_consumer_id_fkey(full_name, phone_number, email), addresses(*)"
         ).eq("id", order_id).execute()
         
         if not order_result.data:
@@ -261,13 +261,14 @@ async def get_order(
                 errors={"auth": "You can only view your own orders"}
             )
         
-        # Get order items
+        # Get order items with farmer contact info
         items_result = supabase_admin_client.table("order_items").select(
-            "*, products(name), users!order_items_farmer_id_fkey(full_name, farm_name)"
+            "*, products(name), users!order_items_farmer_id_fkey(full_name, farm_name, phone_number)"
         ).eq("order_id", order_id).execute()
         
-        # Format order items
+        # Format order items and collect farmer contact
         order_items = []
+        farmer_contacts = []
         for item in items_result.data:
             product = item.pop("products", {})
             farmer_info = item.pop("users", {})
@@ -283,6 +284,22 @@ async def get_order(
                 "subtotal": Decimal(str(item["subtotal"]))
             }
             order_items.append(order_item)
+            
+            # Collect unique farmer contacts
+            if farmer_info and farmer_info.get("phone_number") and farmer_info["id"] not in [f["farmer_id"] for f in farmer_contacts]:
+                farmer_contacts.append({
+                    "farmer_id": item["farmer_id"],
+                    "farmer_name": farmer_info.get("farm_name") or farmer_info.get("full_name"),
+                    "phone_number": farmer_info.get("phone_number")
+                })
+        
+        # Get order status history
+        try:
+            history_result = supabase_admin_client.table("order_status_history").select("*").eq("order_id", order_id).order("created_at", desc=False).execute()
+            status_history = history_result.data if history_result.data else []
+        except Exception as e:
+            print(f"Failed to get status history: {str(e)}")
+            status_history = []
         
         # Format response
         consumer_info = order.pop("users", {})
@@ -291,8 +308,12 @@ async def get_order(
         order_response = {
             **order,
             "consumer_name": consumer_info.get("full_name"),
+            "consumer_phone": consumer_info.get("phone_number"),
+            "consumer_email": consumer_info.get("email"),
             "delivery_address": address_info,
-            "items": order_items
+            "items": order_items,
+            "farmer_contacts": farmer_contacts,
+            "status_history": status_history
         }
         
         return create_response(
@@ -307,6 +328,7 @@ async def get_order(
             errors={"auth": e.detail}
         )
     except Exception as e:
+        print(f"❌ Get order error: {str(e)}")
         return create_response(
             success=False,
             message="Failed to retrieve order",
@@ -319,12 +341,12 @@ async def update_order_status(
     status_update: UpdateOrderStatusRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """Update order status."""
+    """Update order status with tracking history."""
     try:
         user = await get_current_user(credentials)
         
-        # Get order
-        order_result = supabase_admin_client.table("orders").select("consumer_id, status").eq("id", order_id).execute()
+        # Get order with order number
+        order_result = supabase_admin_client.table("orders").select("consumer_id, status, order_number").eq("id", order_id).execute()
         
         if not order_result.data:
             return create_response(
@@ -334,6 +356,7 @@ async def update_order_status(
             )
         
         order = order_result.data[0]
+        old_status = order["status"]
         
         # Check permissions
         if user["role"] not in ["admin", "farmer"] and order["consumer_id"] != user["id"]:
@@ -343,24 +366,57 @@ async def update_order_status(
                 errors={"auth": "Insufficient permissions"}
             )
         
-        # Update status
-        result = supabase_admin_client.table("orders").update({"status": status_update.status}).eq("id", order_id).execute()
+        # Calculate estimated delivery time
+        from datetime import timedelta
+        estimated_delivery = None
+        if status_update.status == "confirmed":
+            estimated_delivery = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+        elif status_update.status == "processing":
+            estimated_delivery = (datetime.utcnow() + timedelta(hours=12)).isoformat()
+        elif status_update.status == "out_for_delivery":
+            estimated_delivery = (datetime.utcnow() + timedelta(hours=2)).isoformat()
+        elif status_update.status == "delivered":
+            estimated_delivery = datetime.utcnow().isoformat()
+        
+        # Update status and estimated delivery
+        update_data = {"status": status_update.status, "updated_at": datetime.utcnow().isoformat()}
+        if estimated_delivery:
+            update_data["estimated_delivery"] = estimated_delivery
+        if status_update.status == "delivered":
+            update_data["delivered_at"] = datetime.utcnow().isoformat()
+        
+        result = supabase_admin_client.table("orders").update(update_data).eq("id", order_id).execute()
+        
+        # Create status history entry
+        try:
+            history_entry = {
+                "id": str(uuid.uuid4()),
+                "order_id": order_id,
+                "status": status_update.status,
+                "changed_by": user["id"],
+                "changed_by_name": user.get("full_name", "System"),
+                "notes": f"Status changed from {old_status} to {status_update.status}",
+                "created_at": datetime.utcnow().isoformat()
+            }
+            supabase_admin_client.table("order_status_history").insert(history_entry).execute()
+        except Exception as e:
+            print(f"Failed to create status history: {str(e)}")
         
         # Send notification to consumer
         try:
             status_messages = {
-                "confirmed": "Your order has been confirmed!",
-                "processing": "Your order is being prepared",
-                "out_for_delivery": "Your order is out for delivery!",
-                "delivered": "Your order has been delivered!",
-                "cancelled": "Your order has been cancelled"
+                "confirmed": f"Your order #{order['order_number']} has been confirmed and will be delivered within 24 hours!",
+                "processing": f"Your order #{order['order_number']} is being prepared by the farmer.",
+                "out_for_delivery": f"Your order #{order['order_number']} is out for delivery! Expected within 2 hours.",
+                "delivered": f"Your order #{order['order_number']} has been delivered! Enjoy your fresh produce!",
+                "cancelled": f"Your order #{order['order_number']} has been cancelled."
             }
             
             notification_data = {
                 "id": str(uuid.uuid4()),
                 "user_id": order["consumer_id"],
                 "type": f"order_{status_update.status}",
-                "title": "Order Status Update",
+                "title": "📦 Order Status Update",
                 "message": status_messages.get(status_update.status, f"Order status changed to {status_update.status}"),
                 "is_read": False,
                 "created_at": datetime.utcnow().isoformat()
@@ -381,6 +437,7 @@ async def update_order_status(
             errors={"auth": e.detail}
         )
     except Exception as e:
+        print(f"❌ Update status error: {str(e)}")
         return create_response(
             success=False,
             message="Failed to update order status",

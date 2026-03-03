@@ -18,8 +18,12 @@ export const orderService = {
     return response.data;
   },
 
-  async getOrders() {
-    const response = await apiClient.get('/orders');
+  async getOrders(params?: { page?: number; perPage?: number }) {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.perPage) queryParams.append('perPage', params.perPage.toString());
+    
+    const response = await apiClient.get(`/orders?${queryParams.toString()}`);
     return response.data;
   },
 
@@ -35,6 +39,12 @@ export const orderService = {
 
   async cancelOrder(id: string) {
     const response = await apiClient.post(`/orders/${id}/cancel`);
+    return response.data;
+  },
+  
+  async trackOrder(id: string) {
+    // Fetch detailed order tracking information
+    const response = await apiClient.get(`/orders/${id}`);
     return response.data;
   },
 };

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { Role } from '@/types/types';
 import { authService } from '@/services/authService';
 
@@ -24,6 +25,43 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, role }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      if (!credentialResponse.credential) {
+        setError('No credential received from Google. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log('Google credential received, sending to backend...');
+      const response = await authService.googleLogin(credentialResponse.credential, role);
+      
+      console.log('Backend response:', response);
+      if (response.success) {
+        onLogin();
+      } else {
+        setError(response.message || 'Google login failed. Please check backend logs.');
+      }
+    } catch (err: any) {
+      console.error('Google login error:', err);
+      const errorMsg = err.response?.data?.message 
+        || err.response?.data?.errors?.server 
+        || err.message 
+        || 'Google authentication failed. Check console for details.';
+      setError(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error('Google OAuth error');
+    setError('Google login popup closed or failed. Ensure you have configured Google OAuth in Google Cloud Console with authorized origins: http://localhost:5173');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,15 +139,18 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack, role }) => {
 
       <div className="flex-1 px-6 py-4 flex flex-col">
           {/* Social Login */}
-          <div className="flex gap-4 mb-8">
-              <button className="flex-1 h-12 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="h-5 w-5" alt="Google" />
-                  <span className="text-sm font-semibold text-text-main dark:text-white">Google</span>
-              </button>
-              <button className="flex-1 h-12 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                  <span className="material-symbols-outlined text-text-main dark:text-white">apple</span>
-                  <span className="text-sm font-semibold text-text-main dark:text-white">Apple</span>
-              </button>
+          <div className="mb-8">
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  theme="outline"
+                  size="large"
+                  text={isLogin ? "signin_with" : "signup_with"}
+                  shape="rectangular"
+                  width="350"
+                />
+              </div>
           </div>
 
           <div className="relative flex items-center justify-center mb-8">
