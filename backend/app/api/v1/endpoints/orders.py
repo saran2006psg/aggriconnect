@@ -24,11 +24,13 @@ async def create_order(
     """Create order from cart."""
     try:
         user = await get_current_user(credentials)
+        print(f"📦 Creating order for user: {user['id']}")
         
         # Get user's cart
         cart_result = supabase_admin_client.table("carts").select("id").eq("user_id", user["id"]).execute()
         
         if not cart_result.data:
+            print(f"❌ No cart found for user {user['id']}")
             return create_response(
                 success=False,
                 message="Cart is empty",
@@ -36,13 +38,17 @@ async def create_order(
             )
         
         cart_id = cart_result.data[0]["id"]
+        print(f"🛒 Found cart: {cart_id}")
         
         # Get cart items
         items_result = supabase_admin_client.table("cart_items").select(
             "*, products(id, name, price, farmer_id, stock_quantity)"
         ).eq("cart_id", cart_id).execute()
         
+        print(f"📊 Found {len(items_result.data) if items_result.data else 0} items in cart")
+        
         if not items_result.data:
+            print(f"❌ Cart {cart_id} has no items")
             return create_response(
                 success=False,
                 message="Cart is empty",
@@ -108,11 +114,14 @@ async def create_order(
         order_result = supabase_admin_client.table("orders").insert(new_order).execute()
         
         if not order_result.data:
+            print(f"❌ Failed to insert order into database")
             return create_response(
                 success=False,
                 message="Failed to create order",
                 errors={"server": "Database error"}
             )
+        
+        print(f"✅ Order created: {order_number} (ID: {order_id})")
         
         # Create order items
         for item in order_items:
@@ -157,19 +166,21 @@ async def create_order(
         
         # TODO: Generate QR code
         
+        print(f"✅ Order {order_number} completed successfully. Returning response.")
         return create_response(
             success=True,
             message="Order created successfully",
             data={"order_id": order_id, "order_number": order_number}
         )
     except HTTPException as e:
+        print(f"❌ Auth error in create_order: {e.detail}")
         return create_response(
             success=False,
             message=e.detail,
             errors={"auth": e.detail}
         )
     except Exception as e:
-        print(f"Order creation error: {str(e)}")  # Log the error
+        print(f"❌ Error creating order: {str(e)}")  # Log the error
         return create_response(
             success=False,
             message=f"Failed to create order: {str(e)}",
@@ -185,6 +196,7 @@ async def get_orders(
     """Get user's orders with items."""
     try:
         user = await get_current_user(credentials)
+        print(f"📦 Getting orders for user: {user['id']}, role: {user['role']}")
         
         # Build query based on role - include order items and products
         if user["role"] == "consumer":
@@ -209,6 +221,7 @@ async def get_orders(
         result = query.order("created_at", desc=True).range(offset, offset + perPage - 1).execute()
         
         total = result.count if result.count else 0
+        print(f"📊 Found {total} total orders, returning {len(result.data) if result.data else 0} orders for page {page}")
         
         return create_paginated_response(
             items=result.data,
@@ -218,12 +231,14 @@ async def get_orders(
             message="Orders retrieved successfully"
         )
     except HTTPException as e:
+        print(f"❌ Auth error in get_orders: {e.detail}")
         return create_response(
             success=False,
             message=e.detail,
             errors={"auth": e.detail}
         )
     except Exception as e:
+        print(f"❌ Error in get_orders: {str(e)}")
         return create_response(
             success=False,
             message="Failed to retrieve orders",

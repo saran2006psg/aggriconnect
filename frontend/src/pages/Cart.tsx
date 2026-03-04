@@ -21,8 +21,12 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading
   const total = subtotal + deliveryFee;
 
   const handlePlaceOrder = async () => {
+    console.log('🛒 Place Order clicked. Cart items:', cart.length);
+    console.log('Cart contents:', cart);
+    
     if (cart.length === 0) {
-      setError('Your cart is empty');
+      setError('Your cart is empty! Please add items from the home page first.');
+      console.log('❌ Cart is empty, cannot place order');
       return;
     }
 
@@ -31,27 +35,38 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading
     setSuccess('');
     
     try {
+      console.log('📦 Creating order with delivery type:', deliveryType);
       const response = await orderService.createOrder({
         deliveryType: deliveryType,
       });
+      console.log('📝 Order response:', response);
       
       if (response.success) {
+        console.log('✅ Order created successfully:', response.data.order_number);
         setSuccess(`Order #${response.data.order_number} placed successfully!`);
         // Clear cart
         if (onClearCart) {
           onClearCart();
         }
         // Navigate immediately with timestamp to force page reload
+        console.log('🚀 Redirecting to order tracking...');
         setTimeout(() => {
           navigate('/order-tracking?t=' + Date.now());
         }, 800);
       } else {
-        setError(response.message || 'Failed to place order');
+        console.log('❌ Order failed:', response.message);
+        // Check if it's an auth error
+        if (response.message.includes('token') || response.message.includes('auth')) {
+          setError('Your session has expired. Please log out and log in again.');
+        } else {
+          setError(response.message || 'Failed to place order');
+        }
       }
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || err.response?.data?.errors?.server || 'Failed to place order';
+      console.error('❌ Order placement error:', err);
+      console.error('Error details:', err.response?.data);
       setError(errorMsg);
-      console.error('Order placement error:', err);
     } finally {
       setIsPlacingOrder(false);
     }

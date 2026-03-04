@@ -50,10 +50,18 @@ apiClient.interceptors.response.use(
           }
         }
       } catch (refreshError) {
+        console.log('🔒 Session expired - clearing auth and redirecting to login');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        localStorage.removeItem('cart_cache');
+        
+        // Only redirect if not already on login page
+        if (!window.location.pathname.includes('/login')) {
+          setTimeout(() => {
+            window.location.href = '/login?expired=true';
+          }, 1000);
+        }
         return Promise.reject(refreshError);
       }
     }

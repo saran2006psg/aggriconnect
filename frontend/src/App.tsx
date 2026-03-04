@@ -222,11 +222,14 @@ export default function App() {
 
   // -- Cart Logic --
   const addToCart = async (product: Product, quantity: number = 1) => {
+    console.log('🛒 Adding to cart:', product.name, 'Quantity:', quantity);
+    
     // Optimistic update - show immediately in UI
     setCart(prev => {
       const existing = prev.find(i => i.productId === product.id);
       if (existing) {
         // Update existing item quantity
+        console.log('📦 Updating existing cart item');
         return prev.map(i => 
           i.productId === product.id 
             ? { ...i, quantity: i.quantity + quantity }
@@ -234,6 +237,7 @@ export default function App() {
         );
       } else {
         // Add new item (use temporary ID that will be replaced)
+        console.log('➕ Adding new item to cart');
         return [...prev, {
           id: 'temp-' + product.id,
           productId: product.id,
@@ -253,6 +257,7 @@ export default function App() {
 
     // Background sync with backend
     try {
+      console.log('🔄 Syncing with backend...');
       await cartService.addToCart(product.id, quantity);
       // Silently sync with backend to get correct IDs
       const response = await cartService.getCart();
@@ -269,9 +274,10 @@ export default function App() {
           category: ''
         }));
         setCart(cartItems);
+        console.log('✅ Cart synced. Total items:', cartItems.length);
       }
     } catch (error) {
-      console.error('Failed to add to cart:', error);
+      console.error('❌ Failed to add to cart:', error);
       setToast({ message: 'Failed to add to cart', type: 'error' });
       // Rollback on error
       const response = await cartService.getCart();
