@@ -10,8 +10,10 @@ interface ProductDetailsProps {
 
 const ProductDetails: React.FC<ProductDetailsProps> = ({ navigate, product, onAddToCart, cartItemCount }) => {
   const [quantity, setQuantity] = useState(1);
+  const maxStock = product.stock_quantity ?? 0;
+  const isOutOfStock = maxStock === 0;
 
-  const increment = () => setQuantity(q => q + 1);
+  const increment = () => setQuantity(q => Math.min(q + 1, maxStock));
   const decrement = () => setQuantity(q => Math.max(1, q - 1));
 
   return (
@@ -53,11 +55,11 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ navigate, product, onAd
               <div className="flex items-center justify-between py-4 border-b border-border-light dark:border-border-dark">
                   <span className="text-text-main dark:text-white font-medium">Quantity</span>
                   <div className="flex items-center gap-4">
-                      <button onClick={decrement} className="h-10 w-10 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <button onClick={decrement} disabled={isOutOfStock} className="h-10 w-10 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                           <span className="material-symbols-outlined">remove</span>
                       </button>
                       <span className="font-bold text-xl text-text-main dark:text-white w-8 text-center">{quantity}</span>
-                      <button onClick={increment} className="h-10 w-10 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <button onClick={increment} disabled={isOutOfStock || quantity >= maxStock} className="h-10 w-10 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                           <span className="material-symbols-outlined">add</span>
                       </button>
                   </div>
@@ -81,6 +83,31 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ navigate, product, onAd
                       <div>
                           <p className="text-xs text-text-subtle">Type</p>
                           <p className="font-bold text-text-main dark:text-white">Organic & Fresh</p>
+                      </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                          (product.stock_quantity ?? 0) === 0 
+                              ? 'bg-red-500/10 text-red-500' 
+                              : (product.stock_quantity ?? 0) <= 5 
+                              ? 'bg-yellow-500/10 text-yellow-500' 
+                              : 'bg-green-500/10 text-green-500'
+                      }`}>
+                          <span className="material-symbols-outlined">inventory_2</span>
+                      </div>
+                      <div className="flex-1">
+                          <p className="text-xs text-text-subtle">Available Stock</p>
+                          <p className={`font-bold ${
+                              (product.stock_quantity ?? 0) === 0 
+                                  ? 'text-red-500' 
+                                  : (product.stock_quantity ?? 0) <= 5 
+                                  ? 'text-yellow-500' 
+                                  : 'text-text-main dark:text-white'
+                          }`}>
+                              {(product.stock_quantity ?? 0) === 0 
+                                  ? 'OUT OF STOCK' 
+                                  : `${product.stock_quantity} ${product.unit} available`}
+                          </p>
                       </div>
                   </div>
                   <div className="p-3 bg-background-light dark:bg-background-dark rounded-xl text-sm text-text-main dark:text-white leading-relaxed">
@@ -114,19 +141,27 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ navigate, product, onAd
           <div className="flex gap-4 max-w-md mx-auto">
               <button 
                 onClick={() => navigate('/subscriptions')}
-                className="flex-1 h-14 rounded-full border border-primary text-primary font-bold hover:bg-primary/5 active:scale-[0.98] transition-all"
+                className="flex-1 h-14 rounded-full border border-primary text-primary font-bold hover:bg-primary/5 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isOutOfStock}
               >
                   Subscribe
               </button>
               <button 
                 onClick={() => {
-                    onAddToCart(product, quantity);
-                    navigate('/cart');
+                    if (!isOutOfStock) {
+                        onAddToCart(product, quantity);
+                        navigate('/cart');
+                    }
                 }}
-                className="flex-1 h-14 rounded-full bg-primary text-white font-bold shadow-lg shadow-primary/30 active:scale-[0.98] transition-all flex flex-col items-center justify-center leading-none"
+                disabled={isOutOfStock}
+                className={`flex-1 h-14 rounded-full font-bold shadow-lg active:scale-[0.98] transition-all flex flex-col items-center justify-center leading-none ${
+                    isOutOfStock 
+                        ? 'bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed opacity-50' 
+                        : 'bg-primary text-white shadow-primary/30'
+                }`}
               >
-                  <span>Add to Cart</span>
-                  <span className="text-[10px] font-normal opacity-80">${(product.price * quantity).toFixed(2)}</span>
+                  <span>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</span>
+                  {!isOutOfStock && <span className="text-[10px] font-normal opacity-80">${(product.price * quantity).toFixed(2)}</span>}
               </button>
           </div>
       </div>

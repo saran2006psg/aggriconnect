@@ -12,7 +12,7 @@ export const productService = {
     const params = new URLSearchParams();
     if (filters?.category) params.append('category', filters.category);
     if (filters?.search) params.append('search', filters.search);
-    if (filters?.farmerId) params.append('farmerId', filters.farmerId);
+    if (filters?.farmerId) params.append('farmer', filters.farmerId); // Backend expects 'farmer' parameter
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.perPage) params.append('perPage', filters.perPage.toString());
 

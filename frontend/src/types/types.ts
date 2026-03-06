@@ -29,6 +29,9 @@ export interface Product {
   description?: string;
   location?: string;
   stock_quantity?: number;
+  is_available?: boolean;
+  harvest_date?: string;
+  image_url?: string;
 }
 
 export interface CartItem extends Product {

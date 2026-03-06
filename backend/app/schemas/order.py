@@ -81,6 +81,7 @@ class SubscriptionResponse(BaseModel):
 
 # Bulk Order Schemas
 class BulkOrderItemCreate(BaseModel):
+    product_id: Optional[str] = None
     product_name: str
     quantity: Decimal = Field(..., gt=0)
     unit: str

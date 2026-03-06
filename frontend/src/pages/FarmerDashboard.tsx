@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authService } from '@/services/authService';
 import { orderService } from '@/services/orderService';
+import { bulkOrderService } from '@/services/bulkOrderService';
 import NotificationBell from '@/components/NotificationBell';
 
 interface FarmerDashboardProps {
@@ -11,6 +12,8 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
   const [user, setUser] = useState<any>(null);
   const [todayEarnings, setTodayEarnings] = useState<number>(0);
   const [pendingOrdersCount, setPendingOrdersCount] = useState<number>(0);
+  const [pendingBulkOrdersCount, setPendingBulkOrdersCount] = useState<number>(0);
+  const [bulkOrderEstimated, setBulkOrderEstimated] = useState<number>(0);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -24,6 +27,7 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
 
   const loadDashboardData = async () => {
     try {
+      // Load regular orders
       const response = await orderService.getOrders();
       if (response.success && response.data.items) {
         const orders = response.data.items;
@@ -48,7 +52,7 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
           // Calculate today's earnings and get recent orders
           if (orderDate.getTime() === today.getTime()) {
             if (order.status !== 'cancelled') {
-              earnings += parseFloat(order.total_amount);
+              earnings += parseFloat(order.total || order.total_amount || 0);
             }
             todayOrders.push(order);
           }
@@ -57,6 +61,24 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
         setTodayEarnings(earnings);
         setPendingOrdersCount(pendingCount);
         setRecentOrders(todayOrders.slice(0, 3));
+      }
+
+      // Load bulk orders
+      try {
+        const bulkResponse = await bulkOrderService.getBulkOrders();
+        if (bulkResponse.success && bulkResponse.data.items) {
+          const bulkOrders = bulkResponse.data.items;
+          const pending = bulkOrders.filter((order: any) => order.status === 'Pending');
+          setPendingBulkOrdersCount(pending.length);
+          
+          // Calculate estimated revenue from bulk orders
+          const estimatedRevenue = pending.reduce((total: number, order: any) => {
+            return total + (parseFloat(order.estimated_total || 0));
+          }, 0);
+          setBulkOrderEstimated(estimatedRevenue);
+        }
+      } catch (error) {
+        console.error('Failed to load bulk orders:', error);
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -94,13 +116,30 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
         </div>
 
         {/* Stats */}
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
-            <p className="text-text-subtle font-medium mb-1">Today's Earnings</p>
-            {isLoading ? (
-              <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            ) : (
-              <p className="text-4xl font-bold text-text-main dark:text-white">${todayEarnings.toFixed(2)}</p>
-            )}
+        <div className="grid grid-cols-1 gap-4">
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
+              <p className="text-text-subtle font-medium mb-1">Today's Earnings</p>
+              {isLoading ? (
+                <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              ) : (
+                <p className="text-4xl font-bold text-text-main dark:text-white">${todayEarnings.toFixed(2)}</p>
+              )}
+          </div>
+          
+          {pendingBulkOrdersCount > 0 && (
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-500/5 border border-green-500/20 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-subtle font-medium mb-1">Pending Bulk Requests</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{pendingBulkOrdersCount}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-text-subtle mb-1">Est. Monthly Revenue</p>
+                  <p className="text-xl font-bold text-text-main dark:text-white">${bulkOrderEstimated.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Actions */}
@@ -126,11 +165,14 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
                 </div>
                 <span className="font-bold text-sm text-text-main dark:text-white text-center">Orders</span>
             </button>
-             <button onClick={() => navigate('/farmer-wallet')} className="aspect-square p-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark flex flex-col items-center justify-center gap-3 hover:shadow-md transition-all hover:bg-gray-50 dark:hover:bg-white/5 active:scale-[0.98]">
-                <div className="h-12 w-12 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
-                    <span className="material-symbols-outlined text-2xl">account_balance_wallet</span>
+             <button onClick={() => navigate('/farmer-wallet')} className="aspect-square p-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark flex flex-col items-center justify-center gap-3 hover:shadow-md transition-all hover:bg-gray-50 dark:hover:bg-white/5 active:scale-[0.98] relative">
+                {pendingBulkOrdersCount > 0 && (
+                  <div className="absolute top-3 right-3 h-5 w-5 bg-green-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold">{pendingBulkOrdersCount}</div>
+                )}
+                <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-600">
+                    <span className="material-symbols-outlined text-2xl">request_quote</span>
                 </div>
-                <span className="font-bold text-sm text-text-main dark:text-white text-center">Wallet</span>
+                <span className="font-bold text-sm text-text-main dark:text-white text-center">Bulk Requests</span>
             </button>
         </div>
 

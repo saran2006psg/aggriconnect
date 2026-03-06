@@ -149,8 +149,16 @@ const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate }) => {
 
        <main className="flex-1 p-4">
            <div className="grid grid-cols-1 gap-4">
-               {products.map((product) => (
-                   <div key={product.id} className="flex gap-4 p-3 bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-sm">
+               {products.map((product) => {
+                   const isOutOfStock = !product.stock_quantity || product.stock_quantity === 0;
+                   const isLowStock = product.stock_quantity && product.stock_quantity > 0 && product.stock_quantity <= 5;
+                   
+                   return (
+                   <div key={product.id} className={`flex gap-4 p-3 bg-surface-light dark:bg-surface-dark rounded-2xl border-2 shadow-sm transition-all ${
+                     isOutOfStock ? 'border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10' : 
+                     isLowStock ? 'border-yellow-200 dark:border-yellow-900/30 bg-yellow-50/30 dark:bg-yellow-900/10' : 
+                     'border-border-light dark:border-border-dark'
+                   }`}>
                        <div className="h-24 w-24 rounded-xl bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 overflow-hidden shrink-0 relative flex items-center justify-center">
                            {product.image && product.image !== '/placeholder-product.jpg' ? (
                              <img 
@@ -158,22 +166,35 @@ const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate }) => {
                                onError={(e) => {
                                  e.currentTarget.style.display = 'none';
                                }}
-                               className="w-full h-full object-cover absolute inset-0" 
+                               className={`w-full h-full object-cover absolute inset-0 ${isOutOfStock ? 'opacity-40 grayscale' : ''}`}
                                alt={product.name} 
                              />
                            ) : (
-                             <span className="material-symbols-outlined text-4xl text-green-600 dark:text-green-300">
+                             <span className={`material-symbols-outlined text-4xl text-green-600 dark:text-green-300 ${isOutOfStock ? 'opacity-40' : ''}`}>
                                potted_plant
                              </span>
                            )}
-                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center py-1 backdrop-blur-sm z-10">
-                               {product.stock_quantity && product.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}
+                           <div className={`absolute bottom-0 left-0 right-0 text-white text-[10px] font-bold text-center py-1 backdrop-blur-sm z-10 ${
+                             isOutOfStock ? 'bg-red-500' : 
+                             isLowStock ? 'bg-yellow-500' : 
+                             'bg-green-500/80'
+                           }`}>
+                               {isOutOfStock ? '❌ OUT OF STOCK' : isLowStock ? `⚠️ LOW (${product.stock_quantity})` : `✅ ${product.stock_quantity} in stock`}
                            </div>
                        </div>
                        <div className="flex-1 flex flex-col">
                            <div className="flex justify-between items-start">
-                               <h3 className="font-bold text-text-main dark:text-white line-clamp-1">{product.name}</h3>
-                               <button className="text-text-subtle hover:text-primary">
+                               <div className="flex-1">
+                                 <h3 className={`font-bold line-clamp-1 ${isOutOfStock ? 'text-red-600 dark:text-red-400' : 'text-text-main dark:text-white'}`}>
+                                   {product.name}
+                                 </h3>
+                                 {isOutOfStock && (
+                                   <span className="text-[10px] font-bold text-red-500 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full inline-block mt-1">
+                                     HIDDEN FROM CUSTOMERS
+                                   </span>
+                                 )}
+                               </div>
+                               <button className="text-text-subtle hover:text-primary ml-2">
                                    <span className="material-symbols-outlined text-lg">more_vert</span>
                                </button>
                            </div>
@@ -182,6 +203,15 @@ const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate }) => {
                            <div className="flex items-center justify-between mt-2">
                                <p className="font-bold text-primary">${product.price.toFixed(2)} <span className="text-xs font-normal text-text-subtle">/ {product.unit}</span></p>
                                <div className="flex gap-2">
+                                   {isOutOfStock && (
+                                     <button 
+                                       onClick={() => handleEdit(product)}
+                                       className="h-8 px-3 rounded-lg bg-green-500 text-white font-semibold text-xs hover:bg-green-600 transition-colors flex items-center gap-1"
+                                     >
+                                       <span className="material-symbols-outlined text-sm">add</span>
+                                       Restock
+                                     </button>
+                                   )}
                                    <button 
                                      onClick={() => handleEdit(product)}
                                      className="h-8 w-8 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center text-text-subtle hover:text-primary transition-colors"
@@ -198,7 +228,8 @@ const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate }) => {
                            </div>
                        </div>
                    </div>
-               ))}
+               )}
+           )}
            </div>
            
            {/* Empty State visual helper if needed, currently showing sample products */}
@@ -282,14 +313,62 @@ const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate }) => {
                </div>
 
                <label className="block">
-                 <span className="text-sm font-medium text-text-main dark:text-white mb-1 block">Stock Quantity</span>
-                 <input
-                   type="number"
-                   name="stock_quantity"
-                   value={editForm.stock_quantity}
-                   onChange={handleEditChange}
-                   className="w-full rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark h-12 px-4 focus:ring-2 focus:ring-primary focus:border-primary dark:text-white"
-                 />
+                 <div className="flex items-center justify-between mb-1">
+                   <span className="text-sm font-medium text-text-main dark:text-white">Stock Quantity</span>
+                   {parseInt(editForm.stock_quantity) === 0 && (
+                     <span className="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full">
+                       OUT OF STOCK
+                     </span>
+                   )}
+                   {parseInt(editForm.stock_quantity) > 0 && parseInt(editForm.stock_quantity) <= 5 && (
+                     <span className="text-xs font-bold text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded-full">
+                       LOW STOCK
+                     </span>
+                   )}
+                 </div>
+                 <div className="flex gap-2">
+                   <input
+                     type="number"
+                     name="stock_quantity"
+                     value={editForm.stock_quantity}
+                     onChange={(e) => {
+                       handleEditChange(e);
+                       // Auto-enable availability when restocking
+                       if (parseInt(e.target.value) > 0) {
+                         setEditForm(prev => ({ ...prev, is_available: true }));
+                       }
+                     }}
+                     className="flex-1 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark h-12 px-4 focus:ring-2 focus:ring-primary focus:border-primary dark:text-white"
+                   />
+                   <button
+                     type="button"
+                     onClick={() => {
+                       const newQty = parseInt(editForm.stock_quantity) + 10;
+                       setEditForm(prev => ({ ...prev, stock_quantity: newQty.toString(), is_available: true }));
+                     }}
+                     className="h-12 px-4 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors whitespace-nowrap flex items-center gap-1"
+                   >
+                     <span className="material-symbols-outlined text-lg">add</span>
+                     +10
+                   </button>
+                   <button
+                     type="button"
+                     onClick={() => {
+                       const newQty = parseInt(editForm.stock_quantity) + 50;
+                       setEditForm(prev => ({ ...prev, stock_quantity: newQty.toString(), is_available: true }));
+                     }}
+                     className="h-12 px-4 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors whitespace-nowrap flex items-center gap-1"
+                   >
+                     <span className="material-symbols-outlined text-lg">add</span>
+                     +50
+                   </button>
+                 </div>
+                 {parseInt(editForm.stock_quantity) === 0 && (
+                   <p className="text-xs text-red-500 mt-1">⚠️ Product will be marked as OUT OF STOCK and hidden from customers</p>
+                 )}
+                 {parseInt(editForm.stock_quantity) > 0 && (
+                   <p className="text-xs text-green-600 mt-1">✅ Product will be AVAILABLE for sale</p>
+                 )}
                </label>
 
                <label className="block">
@@ -325,15 +404,23 @@ const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate }) => {
                  />
                </label>
 
-               <label className="flex items-center gap-3">
+               <label className="flex items-start gap-3 p-4 bg-background-light dark:bg-background-dark rounded-xl border border-border-light dark:border-border-dark">
                  <input
                    type="checkbox"
                    name="is_available"
                    checked={editForm.is_available}
                    onChange={handleEditChange}
-                   className="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-2 focus:ring-primary"
+                   disabled={parseInt(editForm.stock_quantity) === 0}
+                   className="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-2 focus:ring-primary mt-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
                  />
-                 <span className="text-sm font-medium text-text-main dark:text-white">Product is available</span>
+                 <div className="flex-1">
+                   <span className="text-sm font-medium text-text-main dark:text-white block">Product is visible to customers</span>
+                   <p className="text-xs text-text-subtle mt-1">
+                     {parseInt(editForm.stock_quantity) === 0 
+                       ? "⚠️ Cannot make available when stock is 0. Add stock first!" 
+                       : "When enabled, customers can browse and purchase this product"}
+                   </p>
+                 </div>
                </label>
 
                <div className="flex gap-3 pt-4">

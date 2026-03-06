@@ -24,8 +24,11 @@ async def get_products(
         # Build query
         query = supabase_admin_client.table("products").select("*, users!products_farmer_id_fkey(full_name, farm_name)", count="exact")
         
-        # Apply filters
-        query = query.eq("is_available", True)
+        # Apply availability filter based on context
+        # If filtering by specific farmer (farmer viewing their own products), show ALL products including out of stock
+        # Otherwise (consumer browsing), only show available products
+        if not farmer:
+            query = query.eq("is_available", True)
         
         if search:
             query = query.or_(f"name.ilike.%{search}%,description.ilike.%{search}%")
@@ -194,6 +197,18 @@ async def update_product(
             update_data["price"] = float(update_data["price"])
         if "harvest_date" in update_data and update_data["harvest_date"]:
             update_data["harvest_date"] = update_data["harvest_date"].isoformat()
+        
+        # Automatically set is_available based on stock_quantity
+        if "stock_quantity" in update_data:
+            stock_qty = update_data["stock_quantity"]
+            if stock_qty > 0:
+                update_data["is_available"] = True
+                print(f"✅ Product {product_id} restocked to {stock_qty} - now AVAILABLE")
+            else:
+                update_data["is_available"] = False
+                print(f"🚫 Product {product_id} stock is 0 - marked OUT OF STOCK")
+        
+        update_data["updated_at"] = datetime.utcnow().isoformat()
         
         result = supabase_admin_client.table("products").update(update_data).eq("id", product_id).execute()
         

@@ -42,7 +42,7 @@ async def create_order(
         
         # Get cart items
         items_result = supabase_admin_client.table("cart_items").select(
-            "*, products(id, name, price, farmer_id, stock_quantity)"
+            "*, products(id, name, price, farmer_id, stock_quantity, is_available)"
         ).eq("cart_id", cart_id).execute()
         
         print(f"📊 Found {len(items_result.data) if items_result.data else 0} items in cart")
@@ -55,20 +55,39 @@ async def create_order(
                 errors={"cart": "No items in cart"}
             )
         
-        # Calculate totals
+        # Calculate totals and validate stock
         subtotal = Decimal("0")
         order_items = []
+        stock_errors = []
         
         for item in items_result.data:
             product = item["products"]
             
-            # Check stock
+            # Comprehensive stock validation
+            if not product.get("is_available", True):
+                stock_errors.append(f"{product['name']} is OUT OF STOCK")
+                continue
+                
+            if product["stock_quantity"] == 0:
+                stock_errors.append(f"{product['name']} is OUT OF STOCK (0 available)")
+                continue
+                
             if product["stock_quantity"] < item["quantity"]:
-                return create_response(
-                    success=False,
-                    message="Insufficient stock",
-                    errors={"product": f"{product['name']} has insufficient stock"}
-                )
+                stock_errors.append(f"{product['name']}: Only {product['stock_quantity']} available (requested {item['quantity']})")
+                continue
+        
+        # Return all stock errors if any
+        if stock_errors:
+            print(f"❌ Stock validation failed: {stock_errors}")
+            return create_response(
+                success=False,
+                message="Some items are out of stock or insufficient",
+                errors={"stock": stock_errors}
+            )
+        
+        # Calculate totals (validation passed)
+        for item in items_result.data:
+            product = item["products"]
             
             item_subtotal = Decimal(str(product["price"])) * item["quantity"]
             subtotal += item_subtotal
@@ -136,13 +155,28 @@ async def create_order(
             }
             supabase_admin_client.table("order_items").insert(order_item).execute()
             
-            # Decrement product stock - update directly instead of using RPC
+            # Decrement product stock and update availability
             product_id = item["product_id"]
-            product_result = supabase_admin_client.table("products").select("stock_quantity").eq("id", product_id).execute()
+            product_result = supabase_admin_client.table("products").select("stock_quantity, name").eq("id", product_id).execute()
             if product_result.data:
                 current_stock = product_result.data[0]["stock_quantity"]
+                product_name = product_result.data[0]["name"]
                 new_stock = max(0, current_stock - item["quantity"])
-                supabase_admin_client.table("products").update({"stock_quantity": new_stock}).eq("id", product_id).execute()
+                
+                # Prepare update data
+                update_data = {"stock_quantity": new_stock}
+                
+                # Mark as unavailable if stock reaches 0
+                if new_stock == 0:
+                    update_data["is_available"] = False
+                    print(f"🚫 {product_name} is now OUT OF STOCK (stock reduced from {current_stock} to 0)")
+                elif new_stock <= 5:
+                    print(f"⚠️ {product_name} stock is LOW: {new_stock} remaining (reduced from {current_stock})")
+                else:
+                    print(f"📉 {product_name} stock reduced: {current_stock} → {new_stock}")
+                
+                # Update product
+                supabase_admin_client.table("products").update(update_data).eq("id", product_id).execute()
         
         # Clear cart
         supabase_admin_client.table("cart_items").delete().eq("cart_id", cart_id).execute()
@@ -204,24 +238,53 @@ async def get_orders(
                 "*, order_items(*, products(name, image_url, category))", 
                 count="exact"
             ).eq("consumer_id", user["id"])
+            
+            # Apply pagination
+            offset = (page - 1) * perPage
+            result = query.order("created_at", desc=True).range(offset, offset + perPage - 1).execute()
+            
+            total = result.count if result.count else 0
+            print(f"📊 Found {total} total orders, returning {len(result.data) if result.data else 0} orders for page {page}")
+            
         elif user["role"] == "farmer":
-            # Get orders containing farmer's products
-            query = supabase_admin_client.table("orders").select(
-                "*, order_items!inner(*, products(name, image_url, category))", 
-                count="exact"
-            ).eq("order_items.farmer_id", user["id"])
+            # For farmers, fetch all orders and filter in Python (Supabase nested filtering limitation)
+            all_orders_result = supabase_admin_client.table("orders").select(
+                "*, order_items(*, products(name, image_url, category))"
+            ).order("created_at", desc=True).execute()
+            
+            # Filter orders containing farmer's products
+            farmer_orders = []
+            for order in all_orders_result.data:
+                # Check if any order item belongs to this farmer
+                has_farmer_product = any(
+                    item.get("farmer_id") == user["id"] 
+                    for item in order.get("order_items", [])
+                )
+                if has_farmer_product:
+                    farmer_orders.append(order)
+            
+            total = len(farmer_orders)
+            
+            # Apply pagination manually
+            offset = (page - 1) * perPage
+            paginated_orders = farmer_orders[offset:offset + perPage]
+            
+            print(f"📊 Found {total} total orders for farmer, returning {len(paginated_orders)} orders for page {page}")
+            
+            result = type('obj', (object,), {'data': paginated_orders, 'count': total})()
+            
         else:  # admin
             query = supabase_admin_client.table("orders").select(
                 "*, order_items(*, products(name, image_url, category))", 
                 count="exact"
             )
-        
-        # Apply pagination
-        offset = (page - 1) * perPage
-        result = query.order("created_at", desc=True).range(offset, offset + perPage - 1).execute()
-        
-        total = result.count if result.count else 0
-        print(f"📊 Found {total} total orders, returning {len(result.data) if result.data else 0} orders for page {page}")
+            
+            # Apply pagination
+            offset = (page - 1) * perPage
+            result = query.order("created_at", desc=True).range(offset, offset + perPage - 1).execute()
+            
+            total = result.count if result.count else 0
+            print(f"📊 Found {total} total orders, returning {len(result.data) if result.data else 0} orders for page {page}")
         
         return create_paginated_response(
             items=result.data,

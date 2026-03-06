@@ -194,6 +194,7 @@ CREATE TABLE IF NOT EXISTS bulk_orders (
     business_location VARCHAR(255) NOT NULL,
     budget_min DECIMAL(10, 2) NOT NULL CHECK (budget_min > 0),
     budget_max DECIMAL(10, 2) NOT NULL CHECK (budget_max >= budget_min),
+    estimated_total DECIMAL(10, 2) DEFAULT 0,
     status VARCHAR(20) NOT NULL CHECK (status IN ('Pending', 'Responded', 'Accepted', 'Rejected')) DEFAULT 'Pending',
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -209,6 +210,7 @@ CREATE INDEX idx_bulk_orders_status ON bulk_orders(status);
 CREATE TABLE IF NOT EXISTS bulk_order_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     bulk_order_id UUID NOT NULL REFERENCES bulk_orders(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES products(id) ON DELETE SET NULL,
     product_name VARCHAR(255) NOT NULL,
     quantity DECIMAL(10, 2) NOT NULL CHECK (quantity > 0),
     unit VARCHAR(50) NOT NULL,
