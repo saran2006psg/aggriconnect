@@ -1,0 +1,225 @@
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate AgriConnect Icons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #22c55e;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .preview {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        .icon-preview {
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        button {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        .success {
+            text-align: center;
+            color: #22c55e;
+            font-weight: bold;
+            margin-top: 20px;
+            display: none;
+        }
+        .instructions {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            border-left: 4px solid #22c55e;
+        }
+        .instructions h3 {
+            color: #1e293b;
+            margin-top: 0;
+        }
+        .instructions ol {
+            color: #475569;
+            line-height: 1.8;
+        }
+        .instructions code {
+            background: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌾 AgriConnect Icon Generator</h1>
+        <p>Generate PWA icons for your mobile app</p>
+        
+        <div class="preview">
+            <div class="icon-preview">
+                <canvas id="icon192" width="192" height="192"></canvas>
+                <p><strong>192x192</strong></p>
+            </div>
+            <div class="icon-preview">
+                <canvas id="icon512" width="512" height="512"></canvas>
+                <p><strong>512x512</strong></p>
+            </div>
+        </div>
+
+        <button onclick="downloadIcons()">📥 Download Both Icons</button>
+        
+        <div class="success" id="success">✅ Icons downloaded! Check your Downloads folder.</div>
+
+        <div class="instructions">
+            <h3>📋 Next Steps:</h3>
+            <ol>
+                <li>Click the button above to download both icons</li>
+                <li>Check your <strong>Downloads</strong> folder for:
+                    <ul>
+                        <li><code>icon-192.png</code></li>
+                        <li><code>icon-512.png</code></li>
+                    </ul>
+                </li>
+                <li>Move both files to: <code>frontend/public/</code></li>
+                <li>Run these commands:
+                    <pre style="background: #1e293b; color: #22c55e; padding: 15px; border-radius: 8px; overflow-x: auto;">git add frontend/public/icon-*.png
+git commit -m "Add PWA app icons"
+git push</pre>
+                </li>
+                <li>Vercel will auto-deploy and the install banner will appear! 🎉</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function createIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#22c55e');
+            gradient.addColorStop(1, '#16a34a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Draw plant icon
+            ctx.fillStyle = 'white';
+            
+            // Pot
+            const potWidth = size * 0.4;
+            const potHeight = size * 0.25;
+            const potX = (size - potWidth) / 2;
+            const potY = size * 0.6;
+            
+            ctx.beginPath();
+            ctx.moveTo(potX + potWidth * 0.1, potY);
+            ctx.lineTo(potX + potWidth * 0.9, potY);
+            ctx.lineTo(potX + potWidth, potY + potHeight);
+            ctx.lineTo(potX, potY + potHeight);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Plant leaves
+            const centerX = size / 2;
+            const baseY = potY;
+            
+            // Left leaf
+            ctx.beginPath();
+            ctx.ellipse(centerX - size * 0.12, baseY - size * 0.15, size * 0.12, size * 0.2, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Right leaf
+            ctx.beginPath();
+            ctx.ellipse(centerX + size * 0.12, baseY - size * 0.15, size * 0.12, size * 0.2, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Center leaf
+            ctx.beginPath();
+            ctx.ellipse(centerX, baseY - size * 0.25, size * 0.1, size * 0.18, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Stem
+            ctx.fillRect(centerX - size * 0.02, baseY - size * 0.3, size * 0.04, size * 0.3);
+            
+            return canvas;
+        }
+
+        // Create icons on load
+        window.onload = function() {
+            createIcon('icon192', 192);
+            createIcon('icon512', 512);
+        };
+
+        function downloadIcons() {
+            // Download 192x192
+            const canvas192 = document.getElementById('icon192');
+            canvas192.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'icon-192.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+            
+            // Download 512x512
+            setTimeout(() => {
+                const canvas512 = document.getElementById('icon512');
+                canvas512.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'icon-512.png';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    // Show success message
+                    document.getElementById('success').style.display = 'block';
+                });
+            }, 500);
+        }
+    </script>
+</body>
+</html>
