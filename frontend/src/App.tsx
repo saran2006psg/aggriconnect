@@ -21,6 +21,7 @@ import FarmerProducts from '@pages/FarmerProducts';
 import FarmerWallet from '@pages/FarmerWallet';
 import NotificationBell from '@/components/NotificationBell';
 import Toast from '@/components/Toast';
+import { InstallPWA } from '@/components/InstallPWA';
 
 export default function App() {
   const routerNavigate = useNavigate();
@@ -379,6 +380,10 @@ export default function App() {
           onClose={() => setToast(null)} 
         />
       )}
+      
+      {/* PWA Install Prompt */}
+      <InstallPWA />
+      
       <Routes>
         <Route path="/" element={<Onboarding onRoleSelect={handleRoleSelect} />} />
         <Route path="/login" element={<Login onLogin={handleLogin} role={role} onBack={() => navigate('/')} />} />
