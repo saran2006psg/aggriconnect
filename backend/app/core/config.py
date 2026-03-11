@@ -11,11 +11,16 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
-    # CORS
-    CORS_ORIGINS: List[str] = os.getenv(
-        "CORS_ORIGINS",
-        "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
-    ).split(",")
+    # CORS - Using string to avoid pydantic JSON parsing issues
+    CORS_ORIGINS_STR: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+    
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        """Parse CORS_ORIGINS from environment or use default"""
+        cors_str = os.getenv("CORS_ORIGINS", self.CORS_ORIGINS_STR)
+        if not cors_str or cors_str.strip() == "":
+            cors_str = self.CORS_ORIGINS_STR
+        return [origin.strip() for origin in cors_str.split(",") if origin.strip()]
     
     # Supabase
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
