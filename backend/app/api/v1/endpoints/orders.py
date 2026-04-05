@@ -12,9 +12,26 @@ import random
 
 router = APIRouter()
 
+STATUS_MAP = {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "processing": "Processing",
+    "out_for_delivery": "Out for Delivery",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled",
+}
+
 def generate_order_number() -> str:
     """Generate unique order number."""
     return f"AC-{random.randint(1000, 9999)}"
+
+
+def normalize_status(status: str) -> str:
+    """Accept snake_case/lowercase and normalize to DB status format."""
+    key = (status or "").strip().lower().replace(" ", "_")
+    if key not in STATUS_MAP:
+        raise HTTPException(status_code=400, detail="Invalid order status")
+    return STATUS_MAP[key]
 
 @router.post("")
 async def create_order(
@@ -190,7 +207,7 @@ async def create_order(
                     "user_id": farmer_id,
                     "type": "order_placed",
                     "title": "New Order Received!",
-                    "message": f"You have a new order #{order_number} worth ${total:.2f}",
+                    "message": f"You have a new order #{order_number} worth ₹{total:.2f}",
                     "is_read": False,
                     "created_at": datetime.utcnow().isoformat()
                 }
@@ -255,12 +272,16 @@ async def get_orders(
             # Filter orders containing farmer's products
             farmer_orders = []
             for order in all_orders_result.data:
-                # Check if any order item belongs to this farmer
-                has_farmer_product = any(
-                    item.get("farmer_id") == user["id"] 
-                    for item in order.get("order_items", [])
-                )
-                if has_farmer_product:
+                farmer_items = [
+                    item for item in order.get("order_items", [])
+                    if item.get("farmer_id") == user["id"]
+                ]
+                if farmer_items:
+                    order["order_items"] = farmer_items
+                    order["item_count"] = len(farmer_items)
+                    order["farmer_earning"] = float(sum(
+                        Decimal(str(item.get("subtotal") or 0)) for item in farmer_items
+                    ))
                     farmer_orders.append(order)
             
             total = len(farmer_orders)
@@ -341,13 +362,23 @@ async def get_order(
         
         # Get order items with farmer contact info
         items_result = supabase_admin_client.table("order_items").select(
-            "*, products(name), users!order_items_farmer_id_fkey(full_name, farm_name, phone_number)"
+            "*, products(name, image_url, category), users!order_items_farmer_id_fkey(id, full_name, farm_name, phone_number)"
         ).eq("order_id", order_id).execute()
+
+        # Farmer can only view orders that contain their items.
+        if user["role"] == "farmer" and not any(item.get("farmer_id") == user["id"] for item in items_result.data):
+            return create_response(
+                success=False,
+                message="Forbidden",
+                errors={"auth": "You can only view orders that include your products"}
+            )
         
         # Format order items and collect farmer contact
         order_items = []
         farmer_contacts = []
         for item in items_result.data:
+            if user["role"] == "farmer" and item.get("farmer_id") != user["id"]:
+                continue
             product = item.pop("products", {})
             farmer_info = item.pop("users", {})
             
@@ -355,6 +386,8 @@ async def get_order(
                 "id": item["id"],
                 "product_id": item["product_id"],
                 "product_name": product.get("name"),
+                "product_image_url": product.get("image_url"),
+                "product_category": product.get("category"),
                 "farmer_id": item["farmer_id"],
                 "farmer_name": farmer_info.get("farm_name") or farmer_info.get("full_name"),
                 "quantity": item["quantity"],
@@ -364,7 +397,7 @@ async def get_order(
             order_items.append(order_item)
             
             # Collect unique farmer contacts
-            if farmer_info and farmer_info.get("phone_number") and farmer_info["id"] not in [f["farmer_id"] for f in farmer_contacts]:
+            if farmer_info and farmer_info.get("phone_number") and item["farmer_id"] not in [f["farmer_id"] for f in farmer_contacts]:
                 farmer_contacts.append({
                     "farmer_id": item["farmer_id"],
                     "farmer_name": farmer_info.get("farm_name") or farmer_info.get("full_name"),
@@ -435,6 +468,7 @@ async def update_order_status(
         
         order = order_result.data[0]
         old_status = order["status"]
+        new_status = normalize_status(status_update.status)
         
         # Check permissions
         if user["role"] not in ["admin", "farmer"] and order["consumer_id"] != user["id"]:
@@ -443,24 +477,33 @@ async def update_order_status(
                 message="Forbidden",
                 errors={"auth": "Insufficient permissions"}
             )
+
+        if user["role"] == "farmer":
+            farmer_has_item = supabase_admin_client.table("order_items").select("id").eq("order_id", order_id).eq("farmer_id", user["id"]).limit(1).execute()
+            if not farmer_has_item.data:
+                return create_response(
+                    success=False,
+                    message="Forbidden",
+                    errors={"auth": "You can only update orders that include your products"}
+                )
         
         # Calculate estimated delivery time
         from datetime import timedelta
         estimated_delivery = None
-        if status_update.status == "confirmed":
+        if new_status == "Confirmed":
             estimated_delivery = (datetime.utcnow() + timedelta(hours=24)).isoformat()
-        elif status_update.status == "processing":
+        elif new_status == "Processing":
             estimated_delivery = (datetime.utcnow() + timedelta(hours=12)).isoformat()
-        elif status_update.status == "out_for_delivery":
+        elif new_status == "Out for Delivery":
             estimated_delivery = (datetime.utcnow() + timedelta(hours=2)).isoformat()
-        elif status_update.status == "delivered":
+        elif new_status == "Delivered":
             estimated_delivery = datetime.utcnow().isoformat()
         
         # Update status and estimated delivery
-        update_data = {"status": status_update.status, "updated_at": datetime.utcnow().isoformat()}
+        update_data = {"status": new_status, "updated_at": datetime.utcnow().isoformat()}
         if estimated_delivery:
             update_data["estimated_delivery"] = estimated_delivery
-        if status_update.status == "delivered":
+        if new_status == "Delivered":
             update_data["delivered_at"] = datetime.utcnow().isoformat()
         
         result = supabase_admin_client.table("orders").update(update_data).eq("id", order_id).execute()
@@ -470,32 +513,68 @@ async def update_order_status(
             history_entry = {
                 "id": str(uuid.uuid4()),
                 "order_id": order_id,
-                "status": status_update.status,
+                "status": new_status,
                 "changed_by": user["id"],
                 "changed_by_name": user.get("full_name", "System"),
-                "notes": f"Status changed from {old_status} to {status_update.status}",
+                "notes": f"Status changed from {old_status} to {new_status}",
                 "created_at": datetime.utcnow().isoformat()
             }
             supabase_admin_client.table("order_status_history").insert(history_entry).execute()
         except Exception as e:
             print(f"Failed to create status history: {str(e)}")
+
+        # Credit farmers when order is marked as Delivered (idempotent guard).
+        if old_status != "Delivered" and new_status == "Delivered":
+            try:
+                delivered_items = supabase_admin_client.table("order_items").select("farmer_id, subtotal").eq("order_id", order_id).execute()
+                farmer_totals = {}
+                for item in delivered_items.data or []:
+                    fid = item.get("farmer_id")
+                    farmer_totals[fid] = farmer_totals.get(fid, Decimal("0")) + Decimal(str(item.get("subtotal") or 0))
+
+                for fid, amount in farmer_totals.items():
+                    try:
+                        current = supabase_admin_client.table("users").select("wallet_balance, total_earnings").eq("id", fid).limit(1).execute()
+                        current_wallet = Decimal(str((current.data[0].get("wallet_balance") if current.data else 0) or 0))
+                        current_earned = Decimal(str((current.data[0].get("total_earnings") if current.data else 0) or 0))
+
+                        supabase_admin_client.table("users").update({
+                            "wallet_balance": float(current_wallet + amount),
+                            "total_earnings": float(current_earned + amount),
+                            "updated_at": datetime.utcnow().isoformat(),
+                        }).eq("id", fid).execute()
+
+                        # Optional farmer notification about earnings.
+                        supabase_admin_client.table("notifications").insert({
+                            "id": str(uuid.uuid4()),
+                            "user_id": fid,
+                            "type": "order_earning",
+                            "title": "Payment Credited",
+                            "message": f"INR {amount:.2f} credited for delivered order #{order['order_number']}",
+                            "is_read": False,
+                            "created_at": datetime.utcnow().isoformat(),
+                        }).execute()
+                    except Exception as wallet_error:
+                        print(f"Failed to credit farmer {fid}: {str(wallet_error)}")
+            except Exception as e:
+                print(f"Failed to distribute delivered earnings: {str(e)}")
         
         # Send notification to consumer
         try:
             status_messages = {
-                "confirmed": f"Your order #{order['order_number']} has been confirmed and will be delivered within 24 hours!",
-                "processing": f"Your order #{order['order_number']} is being prepared by the farmer.",
-                "out_for_delivery": f"Your order #{order['order_number']} is out for delivery! Expected within 2 hours.",
-                "delivered": f"Your order #{order['order_number']} has been delivered! Enjoy your fresh produce!",
-                "cancelled": f"Your order #{order['order_number']} has been cancelled."
+                "Confirmed": f"Your order #{order['order_number']} has been confirmed and will be delivered within 24 hours!",
+                "Processing": f"Your order #{order['order_number']} is being prepared by the farmer.",
+                "Out for Delivery": f"Your order #{order['order_number']} is out for delivery! Expected within 2 hours.",
+                "Delivered": f"Your order #{order['order_number']} has been delivered! Enjoy your fresh produce!",
+                "Cancelled": f"Your order #{order['order_number']} has been cancelled."
             }
             
             notification_data = {
                 "id": str(uuid.uuid4()),
                 "user_id": order["consumer_id"],
-                "type": f"order_{status_update.status}",
+                "type": f"order_{new_status.lower().replace(' ', '_')}",
                 "title": "📦 Order Status Update",
-                "message": status_messages.get(status_update.status, f"Order status changed to {status_update.status}"),
+                "message": status_messages.get(new_status, f"Order status changed to {new_status}"),
                 "is_read": False,
                 "created_at": datetime.utcnow().isoformat()
             }

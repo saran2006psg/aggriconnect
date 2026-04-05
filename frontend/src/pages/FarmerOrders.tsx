@@ -11,6 +11,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -49,7 +50,38 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
     }
   };
 
-  const filteredOrders = orders.filter(o => filter === 'All' || o.status === filter);
+  const normalizeStatus = (status?: string) => {
+    return (status || '').toLowerCase().replace(/\s+/g, '_');
+  };
+
+  const formatCurrency = (value: number | string) => {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const handleViewDetails = async (orderId: string) => {
+    setDetailsLoading(true);
+    try {
+      const response = await orderService.getOrder(orderId);
+      if (response.success && response.data) {
+        setSelectedOrder(response.data);
+      } else {
+        alert('Unable to load order details');
+      }
+    } catch (error) {
+      console.error('Failed to load order details:', error);
+      alert('Failed to load order details');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const filteredOrders = orders.filter(o => filter === 'All' || normalizeStatus(o.status) === filter);
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -120,16 +152,16 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                                            <p className="font-bold text-text-main dark:text-white">Order #{order.id.slice(0, 8)}</p>
                                            <p className="text-xs text-text-subtle">{new Date(order.created_at).toLocaleDateString()}</p>
                                        </div>
-                                       <span className={`px-2 py-1 rounded-md text-xs font-bold ${getStatusStyle(order.status)}`}>
-                                           {formatStatus(order.status)}
+                                         <span className={`px-2 py-1 rounded-md text-xs font-bold ${getStatusStyle(normalizeStatus(order.status))}`}>
+                                           {formatStatus(normalizeStatus(order.status))}
                                        </span>
                                    </div>
                                </div>
                            </div>
                            
                            <div className="flex justify-between items-center py-2 border-t border-b border-border-light dark:border-border-dark my-2 border-dashed">
-                               <span className="text-sm font-medium text-text-main dark:text-white">{order.items?.length || 0} items</span>
-                               <span className="text-sm font-bold text-text-main dark:text-white">${parseFloat(order.total || order.total_amount || 0).toFixed(2)}</span>
+                                     <span className="text-sm font-medium text-text-main dark:text-white">{order.item_count || order.order_items?.length || order.items?.length || 0} items</span>
+                                     <span className="text-sm font-bold text-text-main dark:text-white">{formatCurrency(order.farmer_earning || order.total || order.total_amount || 0)}</span>
                            </div>
 
                            <div className="mt-3 space-y-2">
@@ -141,7 +173,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                                        <span className="text-xs font-medium">{order.delivery_type}</span>
                                    </div>
                                    <button 
-                                       onClick={() => setSelectedOrder(order)}
+                                       onClick={() => handleViewDetails(order.id)}
                                        className="text-primary text-xs font-bold hover:underline"
                                    >
                                        View Details
@@ -149,7 +181,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                                </div>
                                
                                {/* Status progression buttons */}
-                               {order.status === 'pending' && (
+                                   {normalizeStatus(order.status) === 'pending' && (
                                    <div className="flex gap-2">
                                        <button 
                                            onClick={() => handleStatusUpdate(order.id, 'cancelled', 'Are you sure you want to reject this order?')}
@@ -167,7 +199,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                                        </button>
                                    </div>
                                )}
-                               {order.status === 'confirmed' && (
+                                     {normalizeStatus(order.status) === 'confirmed' && (
                                    <button 
                                        onClick={() => handleStatusUpdate(order.id, 'processing')}
                                        disabled={statusUpdateLoading}
@@ -176,7 +208,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                                        Start Preparing
                                    </button>
                                )}
-                               {order.status === 'processing' && (
+                                   {normalizeStatus(order.status) === 'processing' && (
                                    <button 
                                        onClick={() => handleStatusUpdate(order.id, 'out_for_delivery', 'Mark order as shipped/ready for pickup?')}
                                        disabled={statusUpdateLoading}
@@ -185,7 +217,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                                        {order.delivery_type === 'Delivery' ? 'Mark as Shipped' : 'Ready for Pickup'}
                                    </button>
                                )}
-                               {order.status === 'out_for_delivery' && (
+                                   {normalizeStatus(order.status) === 'out_for_delivery' && (
                                    <button 
                                        onClick={() => handleStatusUpdate(order.id, 'delivered', 'Confirm order has been delivered/picked up?')}
                                        disabled={statusUpdateLoading}
@@ -218,8 +250,8 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                    <p className="text-sm text-text-subtle">Order ID</p>
                    <p className="font-bold text-text-main dark:text-white">#{selectedOrder.id.slice(0, 8)}</p>
                  </div>
-                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusStyle(selectedOrder.status)}`}>
-                   {formatStatus(selectedOrder.status)}
+                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusStyle(normalizeStatus(selectedOrder.status))}`}>
+                   {formatStatus(normalizeStatus(selectedOrder.status))}
                  </span>
                </div>
 
@@ -236,12 +268,13 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
 
                <div className="border-t border-border-light dark:border-border-dark pt-4">
                  <p className="text-sm font-bold text-text-main dark:text-white mb-3">Order Items</p>
+                 {detailsLoading && <p className="text-sm text-text-subtle">Loading details...</p>}
                  <div className="space-y-3">
-                   {selectedOrder.order_items?.map((item: any, index: number) => (
+                   {(selectedOrder.items || selectedOrder.order_items || []).map((item: any, index: number) => (
                      <div key={index} className="flex gap-3 p-3 bg-surface-light dark:bg-surface-dark rounded-xl">
                        <div className="h-16 w-16 rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0">
-                         {item.products?.image_url ? (
-                           <img src={item.products.image_url} alt={item.products?.name} className="w-full h-full object-cover" />
+                         {(item.product_image_url || item.products?.image_url) ? (
+                           <img src={item.product_image_url || item.products?.image_url} alt={item.product_name || item.products?.name} className="w-full h-full object-cover" />
                          ) : (
                            <div className="w-full h-full flex items-center justify-center">
                              <span className="material-symbols-outlined text-gray-400">potted_plant</span>
@@ -249,11 +282,11 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                          )}
                        </div>
                        <div className="flex-1">
-                         <p className="font-medium text-text-main dark:text-white">{item.products?.name || 'Product'}</p>
-                         <p className="text-xs text-text-subtle">{item.products?.category}</p>
+                         <p className="font-medium text-text-main dark:text-white">{item.product_name || item.products?.name || 'Product'}</p>
+                         <p className="text-xs text-text-subtle">{item.product_category || item.products?.category}</p>
                          <div className="flex justify-between items-center mt-1">
                            <p className="text-sm text-text-subtle">Qty: {item.quantity}</p>
-                           <p className="font-bold text-primary">${parseFloat(item.subtotal).toFixed(2)}</p>
+                           <p className="font-bold text-primary">{formatCurrency(item.subtotal || 0)}</p>
                          </div>
                        </div>
                      </div>
@@ -264,27 +297,33 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                <div className="border-t border-border-light dark:border-border-dark pt-4 space-y-2">
                  <div className="flex justify-between text-sm">
                    <span className="text-text-subtle">Subtotal</span>
-                   <span className="font-medium text-text-main dark:text-white">${parseFloat(selectedOrder.subtotal).toFixed(2)}</span>
+                   <span className="font-medium text-text-main dark:text-white">{formatCurrency(selectedOrder.subtotal || 0)}</span>
                  </div>
                  <div className="flex justify-between text-sm">
                    <span className="text-text-subtle">Delivery Fee</span>
-                   <span className="font-medium text-text-main dark:text-white">${parseFloat(selectedOrder.delivery_fee || 0).toFixed(2)}</span>
+                   <span className="font-medium text-text-main dark:text-white">{formatCurrency(selectedOrder.delivery_fee || 0)}</span>
                  </div>
                  {selectedOrder.discount > 0 && (
                    <div className="flex justify-between text-sm">
                      <span className="text-text-subtle">Discount</span>
-                     <span className="font-medium text-green-600">-${parseFloat(selectedOrder.discount).toFixed(2)}</span>
+                     <span className="font-medium text-green-600">-{formatCurrency(selectedOrder.discount || 0)}</span>
                    </div>
                  )}
                  <div className="flex justify-between text-lg font-bold border-t border-border-light dark:border-border-dark pt-2">
                    <span className="text-text-main dark:text-white">Total</span>
-                   <span className="text-primary">${parseFloat(selectedOrder.total).toFixed(2)}</span>
+                   <span className="text-primary">{formatCurrency(selectedOrder.total || 0)}</span>
                  </div>
+                 {normalizeStatus(selectedOrder.status) === 'delivered' && (
+                   <div className="flex justify-between text-sm bg-green-50 dark:bg-green-900/20 rounded-lg px-3 py-2 mt-2">
+                     <span className="text-green-700 dark:text-green-400 font-medium">Earnings Credited</span>
+                     <span className="text-green-700 dark:text-green-400 font-bold">{formatCurrency(selectedOrder.farmer_earning || selectedOrder.total || 0)}</span>
+                   </div>
+                 )}
                </div>
 
                {/* Status action buttons in modal */}
                <div className="border-t border-border-light dark:border-border-dark pt-4">
-                 {selectedOrder.status === 'pending' && (
+                 {normalizeStatus(selectedOrder.status) === 'pending' && (
                    <div className="flex gap-3">
                      <button 
                        onClick={() => handleStatusUpdate(selectedOrder.id, 'cancelled', 'Are you sure you want to reject this order?')}
@@ -302,7 +341,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                      </button>
                    </div>
                  )}
-                 {selectedOrder.status === 'confirmed' && (
+                 {normalizeStatus(selectedOrder.status) === 'confirmed' && (
                    <button 
                      onClick={() => handleStatusUpdate(selectedOrder.id, 'processing')}
                      disabled={statusUpdateLoading}
@@ -311,7 +350,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                      Start Preparing Order
                    </button>
                  )}
-                 {selectedOrder.status === 'processing' && (
+                 {normalizeStatus(selectedOrder.status) === 'processing' && (
                    <button 
                      onClick={() => handleStatusUpdate(selectedOrder.id, 'out_for_delivery', 'Mark order as shipped/ready for pickup?')}
                      disabled={statusUpdateLoading}
@@ -320,7 +359,7 @@ const FarmerOrders: React.FC<FarmerOrdersProps> = ({ navigate }) => {
                      {selectedOrder.delivery_type === 'Delivery' ? 'Mark as Shipped' : 'Ready for Pickup'}
                    </button>
                  )}
-                 {selectedOrder.status === 'out_for_delivery' && (
+                 {normalizeStatus(selectedOrder.status) === 'out_for_delivery' && (
                    <button 
                      onClick={() => handleStatusUpdate(selectedOrder.id, 'delivered', 'Confirm order has been delivered/picked up?')}
                      disabled={statusUpdateLoading}

@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS users (
     farm_name VARCHAR(255),
     farm_location VARCHAR(255),
     farm_description TEXT,
+    wallet_balance DECIMAL(12, 2) DEFAULT 0,
+    total_earnings DECIMAL(12, 2) DEFAULT 0,
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -45,6 +47,7 @@ CREATE TABLE IF NOT EXISTS products (
     is_available BOOLEAN DEFAULT TRUE,
     harvest_date DATE,
     rating DECIMAL(3, 2) DEFAULT 0.0 CHECK (rating >= 0 AND rating <= 5),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -54,6 +57,7 @@ CREATE INDEX idx_products_farmer ON products(farmer_id);
 CREATE INDEX idx_products_category ON products(category);
 CREATE INDEX idx_products_available ON products(is_available);
 CREATE INDEX idx_products_name ON products(name);
+CREATE INDEX idx_products_deleted_at ON products(deleted_at);
 
 -- ============================================
 -- CARTS TABLE

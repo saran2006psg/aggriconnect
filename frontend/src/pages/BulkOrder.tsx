@@ -201,7 +201,7 @@ const BulkOrder: React.FC<BulkOrderProps> = ({ navigate }) => {
                            className="w-full h-20 object-cover rounded-lg mb-2"
                          />
                          <p className="font-bold text-sm text-text-main dark:text-white truncate">{product.name}</p>
-                         <p className="text-xs text-primary font-bold">${product.price}/{product.unit}</p>
+                         <p className="text-xs text-primary font-bold">₹{product.price}/{product.unit}</p>
                          {product.stock_quantity !== undefined && (
                            <p className={`text-[10px] ${product.stock_quantity > 0 ? 'text-green-500' : 'text-red-500'}`}>
                              {product.stock_quantity > 0 ? `${product.stock_quantity} available` : 'Out of stock'}
@@ -266,7 +266,7 @@ const BulkOrder: React.FC<BulkOrderProps> = ({ navigate }) => {
                      <div className="mt-2 text-xs text-text-subtle">
                        Est. {item.frequency === 'Daily' ? 'Monthly' : item.frequency === 'Weekly' ? 'Monthly' : 'Total'}: 
                        <span className="font-bold text-primary ml-1">
-                         ${((item.price_per_unit || 0) * item.quantity * (item.frequency === 'Daily' ? 30 : item.frequency === 'Weekly' ? 4 : 1)).toFixed(2)}
+                         ₹{((item.price_per_unit || 0) * item.quantity * (item.frequency === 'Daily' ? 30 : item.frequency === 'Weekly' ? 4 : 1)).toFixed(2)}
                        </span>
                      </div>
                    </div>
@@ -280,11 +280,11 @@ const BulkOrder: React.FC<BulkOrderProps> = ({ navigate }) => {
                <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark">
                  <div className="flex justify-between mb-2">
                    <span className="text-sm text-text-subtle">Estimated Total</span>
-                   <span className="font-bold text-primary text-lg">${estimatedTotal.toFixed(2)}/month</span>
+                   <span className="font-bold text-primary text-lg">₹{estimatedTotal.toFixed(2)}/month</span>
                  </div>
                  <div className="flex justify-between mb-2 font-bold text-text-main dark:text-white text-sm">
-                   <span>Min: ${(estimatedTotal * 0.8).toFixed(0)}</span>
-                   <span>Max: ${budgetMax}</span>
+                   <span>Min: ₹{(estimatedTotal * 0.8).toFixed(0)}</span>
+                   <span>Max: ₹{budgetMax}</span>
                  </div>
                  <input 
                    type="range" 
@@ -320,7 +320,7 @@ const BulkOrder: React.FC<BulkOrderProps> = ({ navigate }) => {
            </button>
            {selectedItems.length > 0 && (
              <p className="text-center text-xs text-text-subtle mt-2">
-               {selectedItems.length} product{selectedItems.length !== 1 ? 's' : ''} selected • Est. ${estimatedTotal.toFixed(2)}/month
+               {selectedItems.length} product{selectedItems.length !== 1 ? 's' : ''} selected • Est. ₹{estimatedTotal.toFixed(2)}/month
              </p>
            )}
        </footer>

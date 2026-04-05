@@ -45,7 +45,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ navigate }) => {
                        <img src={item.img} className="h-16 w-16 rounded-xl object-cover" alt={item.name} />
                        <div className="flex-1">
                            <h3 className="font-bold text-text-main dark:text-white">{item.name}</h3>
-                           <p className="text-sm text-text-subtle">${item.price.toFixed(2)} / unit</p>
+                           <p className="text-sm text-text-subtle">₹{item.price.toFixed(2)} / unit</p>
                        </div>
                        <div className="flex items-center gap-3">
                            <button className="h-8 w-8 rounded-full border border-border-light dark:border-border-dark flex items-center justify-center text-lg">-</button>
@@ -62,7 +62,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ navigate }) => {
            <div className="bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-md rounded-2xl border border-border-light dark:border-border-dark shadow-2xl p-4 flex items-center justify-between">
                <div>
                    <p className="text-xs text-text-subtle">Total / {frequency.toLowerCase()}</p>
-                   <p className="text-2xl font-bold text-text-main dark:text-white">$8.10</p>
+                   <p className="text-2xl font-bold text-text-main dark:text-white">₹8.10</p>
                    <p className="text-[10px] text-primary font-medium mt-1">Next: Tue, Oct 26</p>
                </div>
                <button onClick={() => navigate('/home')} className="h-12 px-8 bg-primary text-white font-bold rounded-full shadow-lg shadow-primary/30 active:scale-95 transition-transform">

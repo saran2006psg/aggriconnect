@@ -144,7 +144,7 @@ const ConsumerHome: React.FC<ConsumerHomeProps> = ({ navigate, cartCount, produc
                         <div>
                             <h3 className="text-text-main dark:text-white font-bold leading-tight line-clamp-1">{item.name}</h3>
                             <div className="flex justify-between items-center mt-1">
-                                <span className="text-primary font-bold text-sm">${item.price.toFixed(2)} / {item.unit}</span>
+                                <span className="text-primary font-bold text-sm">₹{item.price.toFixed(2)} / {item.unit}</span>
                                 <div className="flex items-center gap-1">
                                     <span className="material-symbols-outlined text-yellow-500 text-[14px]">star</span>
                                     <span className="text-xs text-text-subtle">{item.rating}</span>

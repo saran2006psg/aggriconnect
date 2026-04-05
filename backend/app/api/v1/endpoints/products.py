@@ -9,6 +9,7 @@ from datetime import datetime
 import uuid
 
 router = APIRouter()
+DELETED_MARKER = "[DELETED]"
 
 @router.get("")
 async def get_products(
@@ -23,7 +24,7 @@ async def get_products(
     try:
         # Build query
         query = supabase_admin_client.table("products").select("*, users!products_farmer_id_fkey(full_name, farm_name)", count="exact")
-        
+
         # Apply availability filter based on context
         # If filtering by specific farmer (farmer viewing their own products), show ALL products including out of stock
         # Otherwise (consumer browsing), only show available products
@@ -58,6 +59,11 @@ async def get_products(
         # Format products
         products = []
         for item in result.data:
+            # Backward compatible soft-delete filter (works even if column isn't present yet)
+            if item.get("deleted_at"):
+                continue
+            if (item.get("description") or "").startswith(DELETED_MARKER):
+                continue
             farmer_info = item.pop("users", {})
             item["farmer"] = farmer_info.get("farm_name") or farmer_info.get("full_name")
             products.append(item)
@@ -82,9 +88,19 @@ async def get_products(
 async def get_product(product_id: str):
     """Get single product by ID."""
     try:
-        result = supabase_admin_client.table("products").select("*, users!products_farmer_id_fkey(full_name, farm_name, farm_location)").eq("id", product_id).execute()
+        result = (
+            supabase_admin_client
+            .table("products")
+            .select("*, users!products_farmer_id_fkey(full_name, farm_name, farm_location)")
+            .eq("id", product_id)
+            .execute()
+        )
         
-        if not result.data:
+        if (
+            not result.data
+            or result.data[0].get("deleted_at")
+            or (result.data[0].get("description") or "").startswith(DELETED_MARKER)
+        ):
             return create_response(
                 success=False,
                 message="Product not found",
@@ -175,7 +191,13 @@ async def update_product(
         await require_role(user, ["farmer"])
         
         # Check if product exists and belongs to user
-        existing = supabase_admin_client.table("products").select("farmer_id").eq("id", product_id).execute()
+        existing = (
+            supabase_admin_client
+            .table("products")
+            .select("farmer_id")
+            .eq("id", product_id)
+            .execute()
+        )
         
         if not existing.data:
             return create_response(
@@ -241,7 +263,13 @@ async def delete_product(
         await require_role(user, ["farmer"])
         
         # Check if product exists and belongs to user
-        existing = supabase_admin_client.table("products").select("farmer_id").eq("id", product_id).execute()
+        existing = (
+            supabase_admin_client
+            .table("products")
+            .select("farmer_id")
+            .eq("id", product_id)
+            .execute()
+        )
         
         if not existing.data:
             return create_response(
@@ -257,7 +285,28 @@ async def delete_product(
                 errors={"auth": "You can only delete your own products"}
             )
         
-        supabase_admin_client.table("products").delete().eq("id", product_id).execute()
+        # Try hard delete first. If the product is referenced by order history,
+        # fallback to soft delete so it disappears from product APIs.
+        try:
+            supabase_admin_client.table("products").delete().eq("id", product_id).execute()
+        except Exception:
+            now = datetime.utcnow().isoformat()
+            try:
+                supabase_admin_client.table("products").update({
+                    "deleted_at": now,
+                    "is_available": False,
+                    "stock_quantity": 0,
+                    "description": DELETED_MARKER,
+                    "updated_at": now,
+                }).eq("id", product_id).execute()
+            except Exception:
+                # Fallback for environments where deleted_at migration is not applied yet
+                supabase_admin_client.table("products").update({
+                    "is_available": False,
+                    "stock_quantity": 0,
+                    "description": DELETED_MARKER,
+                    "updated_at": now,
+                }).eq("id", product_id).execute()
         
         return create_response(
             success=True,

@@ -73,7 +73,7 @@ async def create_bulk_order(
                         "user_id": farmer["id"],
                         "type": "bulk_order_request",
                         "title": "New Bulk Order Request!",
-                        "message": f"New bulk order from {bulk_order.business_name} ({len(bulk_order.items)} products, est. ${estimated_total:.2f}/month)",
+                        "message": f"New bulk order from {bulk_order.business_name} ({len(bulk_order.items)} products, est. ₹{estimated_total:.2f}/month)",
                         "is_read": False,
                         "created_at": datetime.utcnow().isoformat()
                     }
@@ -226,7 +226,7 @@ async def respond_to_bulk_order(
                 "user_id": consumer_id,
                 "type": "bulk_order_response",
                 "title": "New Quote Received!",
-                "message": f"{farmer_name} sent you a quote for ${float(response.quoted_price):.2f}/month for your bulk order",
+                "message": f"{farmer_name} sent you a quote for ₹{float(response.quoted_price):.2f}/month for your bulk order",
                 "is_read": False,
                 "created_at": datetime.utcnow().isoformat()
             }

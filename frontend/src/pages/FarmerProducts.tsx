@@ -201,7 +201,7 @@ const FarmerProducts: React.FC<FarmerProductsProps> = ({ navigate }) => {
                            <p className="text-sm text-text-subtle mb-auto">{product.category}</p>
                            
                            <div className="flex items-center justify-between mt-2">
-                               <p className="font-bold text-primary">${product.price.toFixed(2)} <span className="text-xs font-normal text-text-subtle">/ {product.unit}</span></p>
+                               <p className="font-bold text-primary">₹{product.price.toFixed(2)} <span className="text-xs font-normal text-text-subtle">/ {product.unit}</span></p>
                                <div className="flex gap-2">
                                    {isOutOfStock && (
                                      <button 

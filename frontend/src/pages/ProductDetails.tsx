@@ -48,7 +48,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ navigate, product, onAd
           <div className="bg-surface-light dark:bg-surface-dark rounded-[2rem] p-6 shadow-xl border border-border-light dark:border-border-dark/50">
               <div className="flex justify-between items-start mb-2">
                   <h1 className="text-3xl font-bold text-text-main dark:text-white leading-tight w-2/3">{product.name}</h1>
-                  <p className="text-2xl font-bold text-primary">${product.price} <span className="text-sm text-text-subtle font-normal">/ {product.unit}</span></p>
+                  <p className="text-2xl font-bold text-primary">₹{product.price} <span className="text-sm text-text-subtle font-normal">/ {product.unit}</span></p>
               </div>
 
               {/* Quantity */}
@@ -161,7 +161,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ navigate, product, onAd
                 }`}
               >
                   <span>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</span>
-                  {!isOutOfStock && <span className="text-[10px] font-normal opacity-80">${(product.price * quantity).toFixed(2)}</span>}
+                  {!isOutOfStock && <span className="text-[10px] font-normal opacity-80">₹{(product.price * quantity).toFixed(2)}</span>}
               </button>
           </div>
       </div>

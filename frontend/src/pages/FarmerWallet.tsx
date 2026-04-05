@@ -141,7 +141,7 @@ const FarmerWallet: React.FC<FarmerWalletProps> = ({ navigate }) => {
            {/* Balance Card */}
            <div className="bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-6 text-white shadow-lg shadow-primary/20">
                <p className="text-white/80 font-medium mb-1">Total Balance</p>
-               <h2 className="text-4xl font-bold mb-6">$1,250.75</h2>
+               <h2 className="text-4xl font-bold mb-6">₹1,250.75</h2>
                <div className="flex gap-4">
                    <button className="flex-1 bg-white text-primary font-bold h-12 rounded-xl flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform">
                        <span className="material-symbols-outlined">download</span>
@@ -167,7 +167,7 @@ const FarmerWallet: React.FC<FarmerWalletProps> = ({ navigate }) => {
                        </span>
                    </div>
                    <p className="text-xs text-text-subtle">This Month</p>
-                   <p className="font-bold text-lg text-text-main dark:text-white">+$842.00</p>
+                   <p className="font-bold text-lg text-text-main dark:text-white">+₹842.00</p>
                </div>
                <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark">
                    <div className="flex justify-between items-start mb-2">
@@ -179,7 +179,7 @@ const FarmerWallet: React.FC<FarmerWalletProps> = ({ navigate }) => {
                        </span>
                    </div>
                    <p className="text-xs text-text-subtle">Pending</p>
-                   <p className="font-bold text-lg text-text-main dark:text-white">$120.50</p>
+                   <p className="font-bold text-lg text-text-main dark:text-white">₹120.50</p>
                </div>
            </div>
 
@@ -198,7 +198,7 @@ const FarmerWallet: React.FC<FarmerWalletProps> = ({ navigate }) => {
                            <Tooltip 
                              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                              itemStyle={{ color: '#6A994E', fontWeight: 'bold' }}
-                             formatter={(value: number) => [`$${value.toFixed(2)}`, 'Earnings']}
+                             formatter={(value: number) => [`₹${value.toFixed(2)}`, 'Earnings']}
                            />
                            <Area type="monotone" dataKey="amount" stroke="#6A994E" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" />
                        </AreaChart>
@@ -224,7 +224,7 @@ const FarmerWallet: React.FC<FarmerWalletProps> = ({ navigate }) => {
                                </div>
                            </div>
                            <span className={`font-bold ${tx.type === 'credit' ? 'text-green-600 dark:text-green-400' : 'text-text-main dark:text-white'}`}>
-                               {tx.type === 'credit' ? '+' : '-'}${tx.amount.toFixed(2)}
+                               {tx.type === 'credit' ? '+' : '-'}₹{tx.amount.toFixed(2)}
                            </span>
                        </div>
                    ))}
@@ -254,7 +254,7 @@ const FarmerWallet: React.FC<FarmerWalletProps> = ({ navigate }) => {
                                </div>
                            </div>
                            <div className="text-right">
-                               <p className="font-bold text-text-main dark:text-white">${payout.amount.toFixed(2)}</p>
+                               <p className="font-bold text-text-main dark:text-white">₹{payout.amount.toFixed(2)}</p>
                                <div className="flex items-center justify-end gap-1">
                                    <span className={`h-1.5 w-1.5 rounded-full ${getStatusDot(payout.status)}`}></span>
                                    <p className={`text-xs font-medium ${getStatusColor(payout.status)}`}>{payout.status}</p>

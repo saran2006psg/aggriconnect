@@ -23,7 +23,7 @@ class CreateOrderRequest(BaseModel):
     promo_code: Optional[str] = None
 
 class UpdateOrderStatusRequest(BaseModel):
-    status: Literal["Pending", "Confirmed", "Out for Delivery", "Delivered", "Cancelled"]
+    status: str
 
 class OrderResponse(BaseModel):
     id: str

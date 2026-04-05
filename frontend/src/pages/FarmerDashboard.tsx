@@ -122,7 +122,7 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
               {isLoading ? (
                 <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
               ) : (
-                <p className="text-4xl font-bold text-text-main dark:text-white">${todayEarnings.toFixed(2)}</p>
+                <p className="text-4xl font-bold text-text-main dark:text-white">₹{todayEarnings.toFixed(2)}</p>
               )}
           </div>
           
@@ -135,7 +135,7 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-text-subtle mb-1">Est. Monthly Revenue</p>
-                  <p className="text-xl font-bold text-text-main dark:text-white">${bulkOrderEstimated.toFixed(2)}</p>
+                  <p className="text-xl font-bold text-text-main dark:text-white">₹{bulkOrderEstimated.toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -204,7 +204,7 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ navigate }) => {
                              <p className="font-bold text-text-main dark:text-white text-sm">Order #{order.id.slice(0, 8)}</p>
                              <p className="text-xs text-text-subtle">{order.delivery_type} • {order.items?.length || 0} Items</p>
                          </div>
-                         <span className="font-bold text-primary">${parseFloat(order.total_amount).toFixed(2)}</span>
+                         <span className="font-bold text-primary">₹{parseFloat(order.total_amount).toFixed(2)}</span>
                     </div>
                   ))
                 ) : (

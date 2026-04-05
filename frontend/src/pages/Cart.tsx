@@ -133,7 +133,7 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading
                             </div>
                             <div className="flex-1 flex flex-col justify-center">
                                 <h3 className="font-bold text-text-main dark:text-white line-clamp-1">{item.name}</h3>
-                                <p className="text-sm text-text-subtle">${item.price.toFixed(2)} / {item.unit}</p>
+                                <p className="text-sm text-text-subtle">₹{item.price.toFixed(2)} / {item.unit}</p>
                                 <p className="text-xs text-text-subtle mt-1">{item.farmer}</p>
                             </div>
                             <div className="flex flex-col items-end justify-center gap-2">
@@ -158,16 +158,16 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading
                     <h3 className="font-bold text-lg mb-2 text-text-main dark:text-white">Bill Details</h3>
                     <div className="flex justify-between text-text-subtle text-sm">
                         <span>Subtotal</span>
-                        <span>${subtotal.toFixed(2)}</span>
+                        <span>₹{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-text-subtle text-sm">
                         <span>Delivery Fee</span>
-                        <span>${deliveryFee.toFixed(2)}</span>
+                        <span>₹{deliveryFee.toFixed(2)}</span>
                     </div>
                     <div className="border-t border-border-light dark:border-border-dark my-2"></div>
                     <div className="flex justify-between font-bold text-lg text-text-main dark:text-white">
                         <span>Total</span>
-                        <span>${total.toFixed(2)}</span>
+                        <span>₹{total.toFixed(2)}</span>
                     </div>
                 </div>
 
@@ -209,7 +209,7 @@ const Cart: React.FC<CartProps> = ({ navigate, cart, onUpdateQuantity, isLoading
               className="w-full h-14 bg-primary text-white rounded-xl font-bold text-lg shadow-lg flex items-center justify-between px-6 active:scale-[0.98] transition-transform hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 <span>{isPlacingOrder ? 'Placing Order...' : 'Place Order'}</span>
-                <span>${total.toFixed(2)}</span>
+                <span>₹{total.toFixed(2)}</span>
             </button>
         </footer>
        )}

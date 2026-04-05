@@ -178,18 +178,18 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                 <tr>
                   <td>${item.products?.name || 'Product'}</td>
                   <td>${item.quantity}</td>
-                  <td>$${Number(item.price_at_purchase || 0).toFixed(2)}</td>
-                  <td>$${Number(item.subtotal || 0).toFixed(2)}</td>
+                  <td>₹${Number(item.price_at_purchase || 0).toFixed(2)}</td>
+                  <td>₹${Number(item.subtotal || 0).toFixed(2)}</td>
                 </tr>
               `).join('') || ''}
             </tbody>
           </table>
           
           <div class="total">
-            <p>Subtotal: $${Number(order.subtotal || 0).toFixed(2)}</p>
-            <p>Delivery Fee: $${Number(order.delivery_fee || 0).toFixed(2)}</p>
-            ${order.discount > 0 ? `<p>Discount: -$${Number(order.discount || 0).toFixed(2)}</p>` : ''}
-            <p style="font-size: 20px; margin-top: 10px;">Total: $${Number(order.total || 0).toFixed(2)}</p>
+            <p>Subtotal: ₹${Number(order.subtotal || 0).toFixed(2)}</p>
+            <p>Delivery Fee: ₹${Number(order.delivery_fee || 0).toFixed(2)}</p>
+            ${order.discount > 0 ? `<p>Discount: -₹${Number(order.discount || 0).toFixed(2)}</p>` : ''}
+            <p style="font-size: 20px; margin-top: 10px;">Total: ₹${Number(order.total || 0).toFixed(2)}</p>
           </div>
           
           <div class="footer">
@@ -252,7 +252,7 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                    <div className="flex justify-between items-start mb-3">
                      <div>
                        <h3 className="font-bold text-text-main dark:text-white">Order #{order.order_number || 'AC-' + order.id.slice(0, 4).toUpperCase()}</h3>
-                       <p className="text-sm text-text-subtle">{order.order_items?.length || 0} Items • ${Number(order.total || 0).toFixed(2)}</p>
+                       <p className="text-sm text-text-subtle">{order.order_items?.length || 0} Items • ₹{Number(order.total || 0).toFixed(2)}</p>
                        <p className="text-xs text-text-subtle mt-1">
                          {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(order.created_at).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}
                        </p>
@@ -494,7 +494,7 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                          <p className="text-xs text-text-subtle">{item.products?.category || ''}</p>
                          <div className="flex justify-between items-center mt-1">
                            <p className="text-sm text-text-subtle">Qty: {item.quantity}</p>
-                           <p className="font-bold text-primary">${Number(item.subtotal || 0).toFixed(2)}</p>
+                           <p className="font-bold text-primary">₹{Number(item.subtotal || 0).toFixed(2)}</p>
                          </div>
                        </div>
                      </div>
@@ -506,21 +506,21 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ navigate }) => {
                <div className="border-t border-border-light dark:border-border-dark pt-4 space-y-2">
                  <div className="flex justify-between text-sm">
                    <span className="text-text-subtle">Subtotal</span>
-                   <span className="font-medium text-text-main dark:text-white">${Number(selectedOrder.subtotal || 0).toFixed(2)}</span>
+                   <span className="font-medium text-text-main dark:text-white">₹{Number(selectedOrder.subtotal || 0).toFixed(2)}</span>
                  </div>
                  <div className="flex justify-between text-sm">
                    <span className="text-text-subtle">Delivery Fee</span>
-                   <span className="font-medium text-text-main dark:text-white">${Number(selectedOrder.delivery_fee || 0).toFixed(2)}</span>
+                   <span className="font-medium text-text-main dark:text-white">₹{Number(selectedOrder.delivery_fee || 0).toFixed(2)}</span>
                  </div>
                  {selectedOrder.discount > 0 && (
                    <div className="flex justify-between text-sm">
                      <span className="text-text-subtle">Discount</span>
-                     <span className="font-medium text-green-600">-${Number(selectedOrder.discount || 0).toFixed(2)}</span>
+                     <span className="font-medium text-green-600">-₹{Number(selectedOrder.discount || 0).toFixed(2)}</span>
                    </div>
                  )}
                  <div className="flex justify-between text-lg font-bold border-t border-border-light dark:border-border-dark pt-2">
                    <span className="text-text-main dark:text-white">Total</span>
-                   <span className="text-primary">${Number(selectedOrder.total || 0).toFixed(2)}</span>
+                   <span className="text-primary">₹{Number(selectedOrder.total || 0).toFixed(2)}</span>
                  </div>
                </div>
 
