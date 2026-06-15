@@ -29,12 +29,12 @@ export const userService = {
 
 export const reviewService = {
   async createReview(productId: string, data: any) {
-    const response = await apiClient.post(`/reviews/products/${productId}`, data);
+    const response = await apiClient.post(`/reviews`, { product_id: productId, ...data });
     return response.data;
   },
 
   async getProductReviews(productId: string) {
-    const response = await apiClient.get(`/reviews/products/${productId}`);
+    const response = await apiClient.get(`/reviews/product/${productId}`);
     return response.data;
   },
 };
