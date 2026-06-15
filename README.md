@@ -1,316 +1,217 @@
 # 🌾 AgriConnect
 
-Full-stack agricultural marketplace platform connecting farmers and consumers directly.
-
-## 📦 Project Structure
-
-This repository contains both frontend and backend:
-
-- **`/frontend`** - React TypeScript application
-- **`/backend`** - Python FastAPI REST API
+AgriConnect is a full-stack agricultural marketplace platform that connects farmers and consumers directly. By eliminating intermediaries, the platform enables farmers to receive better returns on their produce while providing consumers with access to fresh goods at fair prices.
 
 ---
 
-## 🌾 AgriConnect Frontend
+## ⚙️ System Architecture
 
-React TypeScript frontend for the AgriConnect agricultural marketplace platform.
+AgriConnect uses a decoupled client-server architecture built entirely with TypeScript:
 
-## 🚀 Quick Start
+```mermaid
+graph TD
+    subgraph Client ["Client (Frontend)"]
+        A[React 19 SPA] --> B[Vite 6 Bundler]
+        A --> C[Axios API Client]
+        A --> D[Tailwind CSS]
+        A --> E[Recharts Dashboard]
+    end
 
-### Prerequisites
+    subgraph Server ["Server (Backend)"]
+        F[Express.js REST API] --> G[TypeScript]
+        F --> H[JWT Auth & Google OAuth]
+        F --> I[Order Auto-completion Scheduler]
+        F --> J[Multer + Sharp Image Processor]
+    end
 
-- Node.js (v18+)
-- npm or yarn
+    subgraph Database ["Database & Storage"]
+        K[(Supabase PostgreSQL)]
+        L[Supabase Auth Services]
+        M[Supabase File Storage]
+    end
 
-### Installation
-
-1. **Install dependencies:**
-
-   ```bash
-   npm install
-   ```
-
-2. **Set up environment variables:**
-
-   Create or update `.env` file with your Gemini API key:
-
-   ```env
-   VITE_GEMINI_API_KEY=your_api_key_here
-   ```
-
-   Get your API key from: https://makersuite.google.com/app/apikey
-
-3. **Run development server:**
-
-   ```bash
-   npm run dev
-   ```
-
-   The app will be available at `http://localhost:3000`
-
-## 📜 Available Scripts
-
-- `npm run dev` - Start development server (port 3000)
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run type-check` - Run TypeScript type checking
-
-## 📁 Project Structure
-
-```
-frontend/
-├── src/
-│   ├── assets/            # Images, icons, fonts
-│   ├── components/        # Reusable React components
-│   ├── data/              # Static data (data.ts)
-│   ├── pages/             # Page components (18 pages)
-│   ├── styles/            # Global styles (index.css)
-│   ├── types/             # TypeScript definitions
-│   ├── utils/             # Utility functions
-│   ├── App.tsx            # Main app component
-│   └── index.tsx          # App entry point
-├── .env                   # Environment variables
-├── index.html             # HTML template
-├── package.json           # Dependencies
-├── tsconfig.json          # TypeScript config
-└── vite.config.ts         # Vite config
+    C -->|REST Requests + JWT Auth| F
+    F -->|Database Operations| K
+    F -->|Auth Verification| L
+    F -->|Image Uploads| M
 ```
 
-## 🗂️ Path Aliases
-
-Clean imports using TypeScript path aliases:
-
-```typescript
-@/*           → src/*
-@components/* → src/components/*
-@pages/*      → src/pages/*
-@utils/*      → src/utils/*
-@types/*      → src/types/*
-@data/*       → src/data/*
-@styles/*     → src/styles/*
-@assets/*     → src/assets/*
-```
-
-Example:
-
-```typescript
-import { Product } from "@types/types";
-import ConsumerHome from "@pages/ConsumerHome";
-```
-
-## 🛠️ Tech Stack
-
-- **React 19** - UI Framework
-- **TypeScript 5.8** - Type safety
-- **Vite 6** - Build tool
-- **Recharts** - Data visualization
-- **Tailwind CSS** - Styling
-- **Google Gemini AI** - AI features
-
-## 🏗️ Build for Production
-
-```bash
-npm run build
-```
-
-Output will be in the `dist/` directory.
-
-## 🌐 Environment Variables
-
-| Variable              | Description           | Required |
-| --------------------- | --------------------- | -------- |
-| `VITE_GEMINI_API_KEY` | Google Gemini API key | Yes      |
-
----
-
-## 🔧 AgriConnect Backend
-
-Python FastAPI backend with Supabase PostgreSQL database.
-
-### Quick Start (Backend)
-
-1. **Navigate to backend:**
-
-   ```bash
-   cd backend
-   ```
-
-2. **Create virtual environment:**
-
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set up environment:**
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Update `.env` with your Supabase credentials.
-
-5. **Run database migrations:**
-
-   - Go to Supabase SQL Editor
-   - Run the SQL from `backend/app/database/migrations.sql`
-
-6. **Start backend server:**
-
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-
-   API will be available at `http://localhost:8000`
-   API Docs at `http://localhost:8000/docs`
-
-### Backend Tech Stack
-
-- **FastAPI** - Modern Python web framework
-- **Supabase** - PostgreSQL database & authentication
-- **Pydantic** - Data validation
-- **JWT** - Secure authentication
-- **Python 3.11+**
-
-### Key Features
-
-✅ User authentication (JWT tokens)  
-✅ Role-based access control (Consumer, Farmer, Admin)  
-✅ Product catalog with search & filters  
-✅ Shopping cart & order management  
-✅ Farmer wallet & commission system  
-✅ Subscription management  
-✅ Product reviews & ratings  
-✅ Admin analytics dashboard  
-
-### API Documentation
-
-- Interactive Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-See [backend/README.md](backend/README.md) for detailed documentation.
-
----
-
-## 🚀 Full Stack Development
-
-### Run Both Services:
-
-**Terminal 1 (Frontend):**
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-**Terminal 2 (Backend):**
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-### Environment Setup
-
-**Frontend (.env):**
-```env
-VITE_GEMINI_API_KEY=your_gemini_api_key
-VITE_API_URL=http://localhost:8000/api/v1
-```
-
-**Backend (.env):**
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-JWT_SECRET=your_secret_key
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
-```
-
----
-
-## 🐳 Docker Setup
-
-Run the entire stack with Docker:
-
-```bash
-# Backend
-cd backend
-docker-compose up
-
-# Frontend (in another terminal)
-cd frontend
-npm run dev
-```
+- **Frontend Client**: A single-page React application that communicates with the API via a centralized Axios client. It uses Tailwind CSS for styling and Recharts for interactive farmer and admin dashboards.
+- **Backend API**: An Express.js server written in TypeScript that manages REST endpoints, handles user authentication, and runs scheduled tasks (like order status updates) using a cron scheduler.
+- **Database & Storage**: Powered by Supabase, providing PostgreSQL database hosting, authentication, and file storage for product images and profile avatars.
 
 ---
 
 ## 📊 Database Schema
 
-The platform uses Supabase (PostgreSQL) with the following tables:
+The relational database structure in Supabase PostgreSQL manages users, products, carts, orders, subscriptions, wallets, and notifications:
 
-- **users** - User accounts & authentication
-- **farmer_profiles** - Farmer-specific data
-- **products** - Product catalog
-- **reviews** - Product reviews & ratings
-- **carts & cart_items** - Shopping cart
-- **orders & order_items** - Order management
-- **subscriptions** - Recurring orders
-- **wallets & wallet_transactions** - Payment system
-- **admin_analytics** - Platform analytics
+```mermaid
+erDiagram
+    USERS {
+        uuid id PK
+        string email
+        string password_hash
+        string role "consumer | farmer | admin"
+        string name
+        string phone
+        string avatar_url
+        timestamp created_at
+    }
+    ADDRESSES {
+        uuid id PK
+        uuid user_id FK
+        string type "billing | shipping"
+        string line1
+        string line2
+        string city
+        string state
+        string postal_code
+        boolean is_default
+        timestamp created_at
+    }
+    PRODUCTS {
+        uuid id PK
+        string name
+        string description
+        decimal price
+        string unit
+        string category
+        string image_url
+        integer stock
+        string status "active | inactive"
+        uuid farmer_id FK
+        timestamp created_at
+    }
+    CARTS {
+        uuid id PK
+        uuid user_id FK
+        timestamp created_at
+    }
+    CART_ITEMS {
+        uuid id PK
+        uuid cart_id FK
+        uuid product_id FK
+        integer quantity
+        timestamp created_at
+    }
+    ORDERS {
+        uuid id PK
+        string order_number
+        uuid consumer_id FK
+        uuid farmer_id FK
+        decimal total_amount
+        decimal commission_amount
+        decimal payout_amount
+        string status "pending | processing | shipped | delivered | completed | cancelled"
+        timestamp created_at
+        timestamp updated_at
+    }
+    ORDER_ITEMS {
+        uuid id PK
+        uuid order_id FK
+        uuid product_id FK
+        integer quantity
+        decimal unit_price
+        decimal total_price
+    }
+    ORDER_STATUS_HISTORY {
+        uuid id PK
+        uuid order_id FK
+        string status
+        string notes
+        uuid created_by FK
+        timestamp created_at
+    }
+    SUBSCRIPTIONS {
+        uuid id PK
+        uuid consumer_id FK
+        uuid farmer_id FK
+        string frequency "weekly | biweekly | monthly"
+        timestamp next_delivery_date
+        string status "active | paused | cancelled"
+        timestamp created_at
+    }
+    SUBSCRIPTION_ITEMS {
+        uuid id PK
+        uuid subscription_id FK
+        uuid product_id FK
+        integer quantity
+    }
+    NOTIFICATIONS {
+        uuid id PK
+        uuid user_id FK
+        string title
+        string message
+        boolean is_read
+        string type
+        timestamp created_at
+    }
+    WALLETS {
+        uuid id PK
+        uuid user_id FK
+        decimal balance
+        decimal pending_balance
+        timestamp updated_at
+    }
+    WALLET_TRANSACTIONS {
+        uuid id PK
+        uuid wallet_id FK
+        string type "credit | debit"
+        decimal amount
+        string status "completed | pending | failed"
+        uuid reference_id
+        string description
+        timestamp created_at
+    }
+    PAYOUT_REQUESTS {
+        uuid id PK
+        uuid wallet_id FK
+        decimal amount
+        string status "pending | approved | rejected"
+        string bank_details
+        timestamp created_at
+    }
 
-See `backend/app/database/migrations.sql` for complete schema.
+    USERS ||--o{ ADDRESSES : "has"
+    USERS ||--o| WALLETS : "owns"
+    USERS ||--o{ PRODUCTS : "lists"
+    USERS ||--o{ CARTS : "has"
+    USERS ||--o{ ORDERS : "places/receives"
+    USERS ||--o{ SUBSCRIPTIONS : "subscribes"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    
+    WALLETS ||--o{ WALLET_TRANSACTIONS : "logs"
+    WALLETS ||--o{ PAYOUT_REQUESTS : "requests"
+    
+    CARTS ||--o{ CART_ITEMS : "contains"
+    PRODUCTS ||--o{ CART_ITEMS : "in"
+    
+    ORDERS ||--o{ ORDER_ITEMS : "contains"
+    PRODUCTS ||--o{ ORDER_ITEMS : "ordered"
+    ORDERS ||--o{ ORDER_STATUS_HISTORY : "tracks"
+    
+    SUBSCRIPTIONS ||--o{ SUBSCRIPTION_ITEMS : "contains"
+    PRODUCTS ||--o{ SUBSCRIPTION_ITEMS : "subscribed"
+```
 
 ---
 
-## 🎯 Features
+## 🎯 Core Features
 
-### For Consumers
-- Browse fresh produce from local farmers
-- Add products to cart & checkout
-- Subscribe to regular deliveries
-- Track orders in real-time
-- Review & rate products
+### 🛒 Marketplace & Cart
+- Direct access to local farmer product catalogs.
+- Streamlined shopping cart checkouts linking consumers with matching farmers.
 
-### For Farmers
-- List products with inventory management
-- Manage orders & update status
-- Track earnings & wallet balance
-- Request withdrawals
-- View sales analytics
+### 📅 Subscriptions
+- Recurring scheduled orders (weekly, bi-weekly, monthly) to automate fresh food deliveries.
 
-### For Admins
-- Platform-wide analytics dashboard
-- User & farmer management
-- Order oversight
-- Revenue & commission tracking
+### 💼 Farmer Earnings & Wallet
+- Secure balance ledgers for farmers showing credits, debits, pending balances, and transaction history.
+- Built-in payout withdrawal request workflows.
 
----
+### 🔔 In-App Notifications
+- Direct, real-time-like notifications regarding order tracking updates, delivery status changes, and platform announcements.
 
-## 🛣️ Roadmap
-
-- [ ] Payment gateway integration (Stripe/PayPal)
-- [ ] Real-time notifications (WebSocket)
-- [ ] Email & SMS notifications
-- [ ] Mobile app (React Native)
-- [ ] AI-powered product recommendations
-- [ ] Multi-language support
-- [ ] Advanced search & filters
-
----
-
-## 📝 License
-
-MIT License
-
----
-
-**Built with ❤️ for farmers and consumers**
+### 📊 Admin Analytics
+- High-level dashboards for administrators to track order counts, registered users, and system performance.
